@@ -21,7 +21,7 @@ fun MainScreen(
     val navController = rememberNavController()
 
     Scaffold(
-        modifier = modifier,
+        modifier = Modifier,
         bottomBar = { BottomNavBar(navController = navController) }
     ) { innerPadding ->
         NavHost(
