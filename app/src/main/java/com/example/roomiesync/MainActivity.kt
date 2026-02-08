@@ -17,7 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.roomiesync.auth.AuthScreen
 import com.example.roomiesync.auth.AuthUiState
 import com.example.roomiesync.auth.AuthViewModel
-import com.example.roomiesync.home.HomeScreen
+import com.example.roomiesync.home.MainScreen
 import com.example.roomiesync.ui.theme.RoomieSyncTheme
 
 class MainActivity : ComponentActivity() {
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         is AuthUiState.Authenticated -> {
-                            HomeScreen(
+                            MainScreen(
                                 modifier = Modifier.padding(innerPadding),
                                 user = (authState as AuthUiState.Authenticated).user,
                                 onSignOut = { authViewModel.signOut() }

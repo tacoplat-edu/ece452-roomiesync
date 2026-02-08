@@ -22,7 +22,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
