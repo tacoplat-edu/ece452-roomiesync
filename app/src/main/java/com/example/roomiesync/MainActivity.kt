@@ -1,5 +1,6 @@
 package com.example.roomiesync
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,12 +18,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.roomiesync.auth.AuthScreen
 import com.example.roomiesync.auth.AuthUiState
 import com.example.roomiesync.auth.AuthViewModel
+import com.example.roomiesync.data.SupabaseClient
 import com.example.roomiesync.home.MainScreen
 import com.example.roomiesync.ui.theme.RoomieSyncTheme
+import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SupabaseClient.client.handleDeeplinks(intent)
         enableEdgeToEdge()
         setContent {
             RoomieSyncTheme {
@@ -58,5 +62,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { SupabaseClient.client.handleDeeplinks(it) }
     }
 }

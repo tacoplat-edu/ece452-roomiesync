@@ -70,6 +70,14 @@ class AuthViewModel(
         }
     }
 
+    fun signInWithGoogle() {
+        _authMessage.value = null
+        viewModelScope.launch {
+            authRepository.signInWithGoogle()
+                .onFailure { _authMessage.value = it.message ?: "Google sign-in failed" }
+        }
+    }
+
     fun clearMessage() {
         _authMessage.value = null
     }
