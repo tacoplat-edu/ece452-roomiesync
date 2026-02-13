@@ -225,7 +225,7 @@ fun CreateHouseholdContent(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Text(
-                text = "Enter household details",
+                text = "Create a new household",
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 28.sp

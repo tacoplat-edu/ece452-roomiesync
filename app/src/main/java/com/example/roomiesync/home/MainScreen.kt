@@ -20,7 +20,7 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
-    val userHasHouse = true // TODO: This should be retrieved from the user's profile
+    val userHasHouse = false // TODO: This should be retrieved from the user's profile
 
     Scaffold(
         modifier = Modifier,
