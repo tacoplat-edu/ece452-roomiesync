@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.roomiesync.components.BottomNavBar
 import com.example.roomiesync.components.NavItem
+import com.example.roomiesync.household_onboarding.HouseholdOnboardingScreen
 import io.github.jan.supabase.auth.user.UserInfo
 
 @Composable
@@ -19,16 +20,20 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
+    val userHasHouse = true // TODO: This should be retrieved from the user's profile
 
     Scaffold(
         modifier = Modifier,
-        bottomBar = { BottomNavBar(navController = navController) }
+        bottomBar = { if (userHasHouse) BottomNavBar(navController = navController) }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = NavItem.Home.route,
+            startDestination = if (userHasHouse) NavItem.Home.route else "household_onboarding",
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable("household_onboarding") {
+                HouseholdOnboardingScreen()
+            }
             composable(NavItem.Home.route) {
                 HomeScreen(
                     user = user,

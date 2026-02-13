@@ -52,7 +52,7 @@ fun RoomieSyncTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = Typography, // This line is already here, just making sure it is correct
         content = content
     )
 }
