@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.roomiesync.ui.components.FullWidthButtonWithIcon
 
 @Composable
 fun AuthScreen(
@@ -65,7 +66,6 @@ fun AuthScreen(
             color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(16.dp))
-
         Button(
             onClick = { viewModel.signInWithGoogle() },
             modifier = Modifier.fillMaxWidth(),

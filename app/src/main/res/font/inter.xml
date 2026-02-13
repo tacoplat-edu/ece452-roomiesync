@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Thin: 100 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 100" />
+
+    <!-- Extra Light: 200 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 200" />
+
+    <!-- Light: 300 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 300" />
+
+    <!-- Regular: 400 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 400" />
+
+    <!-- Medium: 500 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 500" />
+
+    <!-- Semi Bold: 600 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 600" />
+
+    <!-- Bold: 700 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 700" />
+
+    <!-- Extra Bold: 800 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 800" />
+
+    <!-- Black: 900 -->
+    <font
+        android:font="@font/inter_variable_font_opsz_wght"
+        android:fontStyle="normal"
+        app:fontVariationSettings="'opsz' 12, 'wght' 900" />
+
+</font-family>

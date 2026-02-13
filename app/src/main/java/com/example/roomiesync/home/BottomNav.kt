@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.roomiesync.ui.theme.Typography
 
 sealed class NavItem(val route: String, val icon: ImageVector, val label: String) {
     object Home : NavItem("home", Icons.Outlined.Home, "Home")
@@ -48,7 +50,7 @@ fun BottomNavBar(navController: NavController) {
         items.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
-                label = { Text(text = item.label) },
+                label = { Text(text = item.label, style = Typography.labelSmall) },
                 selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
