@@ -1,98 +1,44 @@
--- RoomieSync schema for Supabase
--- Run in Supabase: SQL Editor → New query → paste → Run
---
--- Table definitions:
---
---   auth.users (Supabase built-in)
---     Auth'd users. We don't create this; sign-up adds rows here.
---
---   profiles
---     One row per user; id = auth.users.id. Extra info: email, display_name.
---
---   houses
---     A "house" / group (e.g. one apartment). name, created_by (user who created it).
---
---   house_members
---     Links users to houses (many-to-many). role = 'admin' | 'member'.
---     Creator is added as admin via trigger when a house is created.
+-- 1. NUKE EVERYTHING: Start from a true zero state
+-- Drop triggers first (depend on tables + functions)
+drop trigger if exists on_house_created on public.houses;
+drop trigger if exists set_house_join_code_trigger on public.houses;
+drop trigger if exists on_auth_user_created on auth.users;
 
--- =============================================================================
--- PROFILES (one per auth user)
--- =============================================================================
-create table if not exists public.profiles (
+-- Drop tables first (cascade drops RLS policies that depend on is_member_of_house)
+drop table if exists public.expense_splits cascade;
+drop table if exists public.expenses cascade;
+drop table if exists public.chore_assignments cascade;
+drop table if exists public.chores cascade;
+drop table if exists public.house_members cascade;
+drop table if exists public.houses cascade;
+drop table if exists public.profiles cascade;
+
+-- Now safe to drop functions (no policies depend on them)
+drop function if exists public.join_house_by_code(text);
+drop function if exists public.is_member_of_house(uuid);
+drop function if exists public.handle_new_house();
+drop function if exists public.handle_new_user();
+drop function if exists public.set_house_join_code();
+drop function if exists public.generate_house_join_code();
+
+-- 2. CORE IDENTITY: Profiles, Houses, and Members
+create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   display_name text,
   created_at timestamptz default now()
 );
 
-alter table public.profiles enable row level security;
-
-create policy "Users can view own profile"
-  on public.profiles for select using (auth.uid() = id);
-create policy "Users can update own profile"
-  on public.profiles for update using (auth.uid() = id);
-create policy "Users can insert own profile"
-  on public.profiles for insert with check (auth.uid() = id);
-
--- Auto-create profile on sign-up
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, email, display_name)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'display_name', new.email)
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
-
--- =============================================================================
--- HOUSES (groups that link users together)
--- =============================================================================
-create table if not exists public.houses (
+create table public.houses (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  address text,
+  join_code text unique,
   created_by uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz default now()
 );
 
-alter table public.houses enable row level security;
-
--- See houses you're a member of
-create policy "Members can view house"
-  on public.houses for select
-  using (
-    exists (
-      select 1 from public.house_members hm
-      where hm.house_id = id and hm.user_id = auth.uid()
-    )
-  );
-
--- Authenticated users can create a house (they become creator)
-create policy "Authenticated users can create house"
-  on public.houses for insert
-  with check (auth.uid() = created_by);
-
--- Only creator can update or delete the house
-create policy "Creator can update house"
-  on public.houses for update
-  using (created_by = auth.uid());
-create policy "Creator can delete house"
-  on public.houses for delete
-  using (created_by = auth.uid());
-
--- =============================================================================
--- HOUSE_MEMBERS (links users to houses; many-to-many)
--- =============================================================================
-create table if not exists public.house_members (
+create table public.house_members (
   house_id uuid not null references public.houses(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
   role text not null default 'member' check (role in ('admin', 'member')),
@@ -100,58 +46,111 @@ create table if not exists public.house_members (
   primary key (house_id, user_id)
 );
 
-alter table public.house_members enable row level security;
+-- Security Helper to prevent recursive RLS errors
+create function public.is_member_of_house(p_house_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists (select 1 from public.house_members where house_id = p_house_id and user_id = auth.uid());
+$$;
 
--- Members can see other members of the same house
-create policy "Members can view house_members"
-  on public.house_members for select
-  using (
-    exists (
-      select 1 from public.house_members hm
-      where hm.house_id = house_members.house_id and hm.user_id = auth.uid()
-    )
-  );
+-- 3. CHORES & ASSIGNMENTS (The Review Queue)
+create table public.chores (
+  id uuid primary key default gen_random_uuid(),
+  house_id uuid not null references public.houses(id) on delete cascade,
+  title text not null,
+  description text,
+  recurrence_type text default 'none',
+  created_at timestamptz default now()
+);
 
--- You can add yourself to a house (e.g. join by code later); creator is added by trigger
-create policy "Users can add themselves to house"
-  on public.house_members for insert
-  with check (auth.uid() = user_id);
+create table public.chore_assignments (
+  id uuid primary key default gen_random_uuid(),
+  chore_id uuid not null references public.chores(id) on delete cascade,
+  assigned_to_id uuid not null references public.profiles(id) on delete cascade,
+  status text default 'todo' check (status in ('todo', 'pending_approval', 'completed')),
+  proof_photo_url text,
+  verified_by uuid references public.profiles(id),
+  due_date timestamptz,
+  completed_at timestamptz
+);
 
--- Admins and house creator can remove members; users can remove themselves (leave)
-create policy "Users can delete own membership"
-  on public.house_members for delete
-  using (user_id = auth.uid());
+-- 4. FINANCES (Expenses & Splits)
+create table public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  house_id uuid not null references public.houses(id) on delete cascade,
+  paid_by_id uuid not null references public.profiles(id) on delete cascade,
+  amount decimal(10,2) not null,
+  description text,
+  created_at timestamptz default now()
+);
 
-create policy "House creator can delete any member"
-  on public.house_members for delete
-  using (
-    exists (
-      select 1 from public.houses h
-      where h.id = house_members.house_id and h.created_by = auth.uid()
-    )
-  );
+create table public.expense_splits (
+  id uuid primary key default gen_random_uuid(),
+  expense_id uuid not null references public.expenses(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  amount_owed decimal(10,2) not null,
+  is_paid boolean default false
+);
 
--- Only house creator can update roles (e.g. promote to admin)
-create policy "House creator can update members"
-  on public.house_members for update
-  using (
-    exists (
-      select 1 from public.houses h
-      where h.id = house_members.house_id and h.created_by = auth.uid()
-    )
-  );
+-- 5. AUTOMATION FUNCTIONS & TRIGGERS
+-- Create profile on signup
+create function public.handle_new_user() returns trigger as $$
+begin
+  insert into public.profiles (id, email, display_name)
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'display_name', new.email));
+  return new;
+end; $$ language plpgsql security definer;
+create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
 
--- When a house is created, add the creator as an admin member
-create or replace function public.handle_new_house()
-returns trigger as $$
+-- Auto-generate unique 8-char join code
+create function public.set_house_join_code() returns trigger as $$
+begin
+  new.join_code := upper(substr(md5(random()::text || clock_timestamp()::text), 1, 8));
+  return new;
+end; $$ language plpgsql;
+create trigger set_house_join_code_trigger before insert on public.houses for each row execute function public.set_house_join_code();
+
+-- Add creator as Admin immediately
+create function public.handle_new_house() returns trigger as $$
 begin
   insert into public.house_members (house_id, user_id, role)
   values (new.id, new.created_by, 'admin');
   return new;
-end;
-$$ language plpgsql security definer;
+end; $$ language plpgsql security definer;
+create trigger on_house_created after insert on public.houses for each row execute function public.handle_new_house();
 
-drop trigger if exists on_house_created on public.houses;
-create trigger on_house_created
-  after insert on public.houses
-  for each row execute function public.handle_new_house();
+-- 6. SECURITY: RLS POLICIES
+alter table public.profiles enable row level security;
+alter table public.houses enable row level security;
+alter table public.house_members enable row level security;
+alter table public.chores enable row level security;
+alter table public.chore_assignments enable row level security;
+alter table public.expenses enable row level security;
+alter table public.expense_splits enable row level security;
+
+-- Profiles: view/update own; insert own (for signup trigger)
+create policy "Profiles: view own" on public.profiles for select using (auth.uid() = id);
+create policy "Profiles: insert own" on public.profiles for insert with check (auth.uid() = id);
+create policy "Profiles: update own" on public.profiles for update using (auth.uid() = id);
+
+-- Houses: view if member, insert as creator (so you can create a new household)
+create policy "Houses: view if member" on public.houses for select using (public.is_member_of_house(id));
+create policy "Houses: insert as creator" on public.houses for insert with check (auth.uid() = created_by);
+
+-- House members: view if member of that house; insert self (creator is added by trigger; join by code uses RPC)
+create policy "House members: view if member" on public.house_members for select using (public.is_member_of_house(house_id));
+create policy "House members: insert self" on public.house_members for insert with check (auth.uid() = user_id);
+
+create policy "Chores: view if member" on public.chores for select using (public.is_member_of_house(house_id));
+create policy "Expenses: view if member" on public.expenses for select using (public.is_member_of_house(house_id));
+
+-- 7. THE JOIN FUNCTION (RPC)
+create function public.join_house_by_code(p_join_code text)
+returns jsonb language plpgsql security definer as $$
+declare v_house_id uuid;
+begin
+  select id into v_house_id from public.houses where join_code = upper(trim(p_join_code)) limit 1;
+  if v_house_id is null then return jsonb_build_object('ok', false, 'error', 'invalid_code'); end if;
+  insert into public.house_members (house_id, user_id, role) values (v_house_id, auth.uid(), 'member') on conflict do nothing;
+  return jsonb_build_object('ok', true);
+end; $$;
+grant execute on function public.join_house_by_code(text) to authenticated;

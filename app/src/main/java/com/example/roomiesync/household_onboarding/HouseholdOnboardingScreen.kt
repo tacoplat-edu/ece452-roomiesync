@@ -84,14 +84,24 @@ fun HouseholdOnboardingScreen(
                 HouseholdOnboardingStep.CREATE -> CreateHouseholdContent(
                     nickname = uiState.householdNickname,
                     address = uiState.householdAddress,
+                    isCreating = uiState.isCreating,
+                    createErrorMessage = uiState.createErrorMessage,
                     onNicknameChange = householdOnboardingViewModel::updateHouseholdNickname,
                     onAddressChange = householdOnboardingViewModel::updateHouseholdAddress,
-                    onBack = householdOnboardingViewModel::onGoHome
+                    onBack = householdOnboardingViewModel::onGoHome,
+                    onCreate = householdOnboardingViewModel::onCreateHouse
+                )
+                HouseholdOnboardingStep.CREATED -> CreatedHouseholdContent(
+                    inviteCode = uiState.createdInviteCode ?: "",
+                    onDone = householdOnboardingViewModel::onDoneFromCreated
                 )
                 HouseholdOnboardingStep.JOIN -> JoinHouseholdContent(
                     code = uiState.joinCode,
+                    isJoining = uiState.isJoining,
+                    joinErrorMessage = uiState.joinErrorMessage,
                     onCodeChange = householdOnboardingViewModel::updateJoinCode,
-                    onBack = householdOnboardingViewModel::onGoHome
+                    onBack = householdOnboardingViewModel::onGoHome,
+                    onJoin = householdOnboardingViewModel::onJoinHouse
                 )
             }
         }
@@ -199,9 +209,12 @@ fun HouseholdOnboardingHomeContent(
 fun CreateHouseholdContent(
     nickname: String,
     address: String,
+    isCreating: Boolean,
+    createErrorMessage: String?,
     onNicknameChange: (String) -> Unit,
     onAddressChange: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onCreate: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -244,6 +257,7 @@ fun CreateHouseholdContent(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                     singleLine = true,
+                    enabled = !isCreating,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryGreen,
                         unfocusedBorderColor = PrimaryGreen
@@ -265,10 +279,19 @@ fun CreateHouseholdContent(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                     singleLine = true,
+                    enabled = !isCreating,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryGreen,
                         unfocusedBorderColor = PrimaryGreen
                     )
+                )
+            }
+
+            if (createErrorMessage != null) {
+                Text(
+                    text = createErrorMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
                 )
             }
 
@@ -277,10 +300,64 @@ fun CreateHouseholdContent(
             val isFormValid = HouseholdDetailsFormValidation.isHouseholdDetailsFormValid(nickname, address)
 
             FullWidthButtonWithIcon(
-                text = "Next",
+                text = if (isCreating) "Creating…" else "Next",
                 icon = Icons.AutoMirrored.Filled.ArrowForward,
-                enabled = isFormValid,
-                onClick = { /* Handle Create */ },
+                enabled = isFormValid && !isCreating,
+                onClick = onCreate,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreatedHouseholdContent(
+    inviteCode: String,
+    onDone: () -> Unit
+) {
+    Scaffold(
+        topBar = { },
+        containerColor = Color.White
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "Household created",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = Color.Black
+            )
+            Text(
+                text = "Share this 8-digit code with your roommates so they can join:",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Black,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = inviteCode,
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 4.sp
+                ),
+                color = PrimaryGreen
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            FullWidthButtonWithIcon(
+                text = "Done",
+                icon = Icons.Filled.Check,
+                backgroundColor = PrimaryGreen,
+                onClick = onDone,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)
@@ -293,8 +370,11 @@ fun CreateHouseholdContent(
 @Composable
 fun JoinHouseholdContent(
     code: String,
+    isJoining: Boolean,
+    joinErrorMessage: String?,
     onCodeChange: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onJoin: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -346,6 +426,7 @@ fun JoinHouseholdContent(
                     modifier = Modifier.fillMaxWidth(0.7f),
                     shape = RoundedCornerShape(8.dp),
                     singleLine = true,
+                    enabled = !isJoining,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         textAlign = TextAlign.Center,
@@ -357,6 +438,14 @@ fun JoinHouseholdContent(
                         unfocusedBorderColor = PrimaryGreen
                     )
                 )
+                if (joinErrorMessage != null) {
+                    Text(
+                        text = joinErrorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.weight(1f))
@@ -364,10 +453,10 @@ fun JoinHouseholdContent(
             val isFormValid = JoinCodeFormValidation.isJoinCodeValid(code)
 
             FullWidthButtonWithIcon(
-                text = "Join",
+                text = if (isJoining) "Joining…" else "Join",
                 icon = Icons.Filled.Check,
-                enabled = isFormValid,
-                onClick = { /* Handle Join */ },
+                enabled = isFormValid && !isJoining,
+                onClick = onJoin,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)
