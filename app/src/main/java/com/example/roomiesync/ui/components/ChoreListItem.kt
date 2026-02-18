@@ -67,7 +67,7 @@ fun ChoreListItem(
             Text(
                 text = choreName,
                 color = secondaryColor,
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
