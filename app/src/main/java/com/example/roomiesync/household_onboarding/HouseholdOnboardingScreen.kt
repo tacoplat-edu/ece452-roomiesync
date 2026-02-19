@@ -178,9 +178,6 @@ fun HouseholdOnboardingHomeContent(
                 icon = Icons.Filled.Add,
                 backgroundColor = PrimaryGreen,
                 onClick = onNavigateToCreate,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -196,9 +193,6 @@ fun HouseholdOnboardingHomeContent(
                 icon = Icons.Filled.Group,
                 backgroundColor = SecondaryGrey,
                 onClick = onNavigateToJoin,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
             )
         }
     }
@@ -304,9 +298,6 @@ fun CreateHouseholdContent(
                 icon = Icons.AutoMirrored.Filled.ArrowForward,
                 enabled = isFormValid && !isCreating,
                 onClick = onCreate,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
             )
         }
     }
@@ -358,9 +349,6 @@ fun CreatedHouseholdContent(
                 icon = Icons.Filled.Check,
                 backgroundColor = PrimaryGreen,
                 onClick = onDone,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
             )
         }
     }
@@ -457,9 +445,6 @@ fun JoinHouseholdContent(
                 icon = Icons.Filled.Check,
                 enabled = isFormValid && !isJoining,
                 onClick = onJoin,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
             )
         }
     }
