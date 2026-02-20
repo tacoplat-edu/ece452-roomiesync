@@ -48,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -170,7 +171,7 @@ fun ChoreScreen(
         ) {
             FullWidthButtonWithIcon(
                 text = "Add a new chore",
-                icon = Icons.Outlined.AddCircle,
+                icon = Icons.Outlined.Add,
                 onClick = onAddChoreClick,
                 modifier = Modifier.fillMaxWidth()
             )
