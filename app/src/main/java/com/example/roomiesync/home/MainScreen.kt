@@ -83,16 +83,19 @@ fun MainScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { 
-                            navController.navigate("profile") {
-                                launchSingleTop = true
+                        IconButton(
+                            modifier = Modifier.padding(end = 16.dp),
+                            onClick = {
+                                navController.navigate("profile") {
+                                    launchSingleTop = true
                             }
                         }) {
                             if (profile?.avatarUrl != null) {
                                 // Placeholder for image loading
+                                // TODO: connect to avatar urls
                                 Box(
                                     modifier = Modifier
-                                        .size(32.dp)
+                                        .size(48.dp)
                                         .clip(CircleShape)
                                         .background(Color.Gray)
                                 )
@@ -101,7 +104,7 @@ fun MainScreen(
                                     imageVector = Icons.Default.AccountCircle,
                                     contentDescription = "Profile",
                                     tint = Color.Gray,
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(48.dp)
                                 )
                             }
                         }

@@ -1,5 +1,6 @@
 package com.example.roomiesync.components
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.CalendarToday
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -42,7 +44,8 @@ fun BottomNavBar(navController: NavController) {
 
     NavigationBar(
         containerColor = Color.White,
-        contentColor = MaterialTheme.colorScheme.primary
+        contentColor = MaterialTheme.colorScheme.primary,
+        windowInsets = WindowInsets(0.dp)
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
