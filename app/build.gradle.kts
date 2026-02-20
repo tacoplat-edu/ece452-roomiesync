@@ -25,6 +25,7 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "")}\"")
+        buildConfigField("String", "SUPABASE_S3_URL", "\"${localProperties.getProperty("SUPABASE_S3_URL", "")}\"")
     }
 
     buildTypes {
@@ -60,6 +61,7 @@ dependencies {
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
+    implementation(libs.supabase.storage)
     implementation(libs.ktor.client.android)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.material)
