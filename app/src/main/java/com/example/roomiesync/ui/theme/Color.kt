@@ -17,5 +17,7 @@ val DarkSecondaryGrey = Color(0xFF5A5D59)
 val TertiaryGreen = Color(0xFF3EEA17)
 val DarkTertiaryGreen = Color(0xFF23930A)
 
+val LightSecondaryGrey = Color(0xFFC7CDC6)
+
 val WarningYellow = Color(0xFFE9C525)
 val ErrorRed = Color(0xFFDE5858)

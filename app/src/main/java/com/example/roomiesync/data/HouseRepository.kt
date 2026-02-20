@@ -2,6 +2,7 @@ package com.example.roomiesync.data
 
 import com.example.roomiesync.auth.AuthRepository
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -14,7 +15,7 @@ class HouseRepository(
 
     private val client get() = SupabaseClient.client
 
-    suspend fun createHouse(name: String, address: String): Result<HouseRow> = withContext(Dispatchers.IO) {
+    suspend fun createHouse(name: String, address: String): Result<House> = withContext(Dispatchers.IO) {
         val userId = authRepository.currentUser()?.id ?: return@withContext Result.failure(
             IllegalStateException("Not authenticated")
         )
@@ -23,7 +24,7 @@ class HouseRepository(
                 CreateHousePayload(name = name, address = address, createdBy = userId)
             ) {
                 select()
-            }.decodeSingle<HouseRow>()
+            }.decodeSingle<House>()
         }
     }
 
@@ -42,6 +43,24 @@ class HouseRepository(
                 response.error == "not_authenticated" -> throw IllegalStateException("Not authenticated")
                 else -> throw RuntimeException(response.error ?: "Unknown error")
             }
+        }
+    }
+
+    suspend fun getUserHouse(): House? = withContext(Dispatchers.IO) {
+        val userId = authRepository.currentUser()?.id ?: return@withContext null
+        try {
+            val response = client.postgrest.from("house_members")
+                .select(Columns.list("houses(*)")) {
+                    filter {
+                        eq("user_id", userId)
+                    }
+                    limit(1)
+                }
+                .decodeSingleOrNull<HouseMemberWithHouse>()
+            response?.houses
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

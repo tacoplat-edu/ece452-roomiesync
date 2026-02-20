@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
                             MainScreen(
                                 modifier = Modifier.padding(innerPadding),
                                 user = (authState as AuthUiState.Authenticated).user,
+                                profile = (authState as AuthUiState.Authenticated).profile,
                                 onSignOut = { authViewModel.signOut() }
                             )
                         }

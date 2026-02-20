@@ -1,5 +1,7 @@
 package com.example.roomiesync.auth
 
+import com.example.roomiesync.data.Profile
+import com.example.roomiesync.data.ProfileRepository
 import com.example.roomiesync.data.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
@@ -8,19 +10,29 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transform
 
-class AuthRepository {
+class AuthRepository(
+    private val profileRepository: ProfileRepository = ProfileRepository()
+) {
 
     private val auth: Auth
         get() = SupabaseClient.client.auth
 
-    val sessionFlow: Flow<AuthState> = auth.sessionStatus.map { status ->
+    val sessionFlow: Flow<AuthState> = auth.sessionStatus.transform { status ->
         when (status) {
-            is SessionStatus.Authenticated -> status.session.user?.let { AuthState.Authenticated(it) } ?: AuthState.NotAuthenticated
-            is SessionStatus.NotAuthenticated -> AuthState.NotAuthenticated
-            SessionStatus.Initializing -> AuthState.Initializing
-            is SessionStatus.RefreshFailure -> AuthState.NotAuthenticated
+            is SessionStatus.Authenticated -> {
+                val user = status.session.user
+                if (user != null) {
+                    val profile = profileRepository.getProfile(user.id)
+                    emit(AuthState.Authenticated(user, profile))
+                } else {
+                    emit(AuthState.NotAuthenticated)
+                }
+            }
+            is SessionStatus.NotAuthenticated -> emit(AuthState.NotAuthenticated)
+            SessionStatus.Initializing -> emit(AuthState.Initializing)
+            is SessionStatus.RefreshFailure -> emit(AuthState.NotAuthenticated)
         }
     }
 
@@ -52,5 +64,5 @@ class AuthRepository {
 sealed class AuthState {
     data object Initializing : AuthState()
     data object NotAuthenticated : AuthState()
-    data class Authenticated(val user: UserInfo) : AuthState()
+    data class Authenticated(val user: UserInfo, val profile: Profile? = null) : AuthState()
 }
