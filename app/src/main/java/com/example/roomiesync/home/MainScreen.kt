@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.roomiesync.chore.ChoreScreen
+import com.example.roomiesync.chore.CreateChoreFormScreen
 import com.example.roomiesync.components.BottomNavBar
 import com.example.roomiesync.components.NavItem
 import com.example.roomiesync.household_onboarding.HouseholdOnboardingScreen
@@ -42,7 +43,14 @@ fun MainScreen(
                 )
             }
             composable(NavItem.Chores.route) {
-                ChoreScreen()
+                ChoreScreen(
+                    onAddChoreClick = { navController.navigate("create_chore") }
+                )
+            }
+            composable("create_chore") {
+                CreateChoreFormScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable(NavItem.Calendar.route) {
                 Text(text = "Calendar")
