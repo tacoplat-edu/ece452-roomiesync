@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.roomiesync.ui.components.FullWidthButtonWithIcon
+import com.example.roomiesync.ui.components.getRequiredLabel
 import com.example.roomiesync.ui.theme.PrimaryGreen
 import com.example.roomiesync.ui.theme.Typography
 import java.text.SimpleDateFormat
@@ -124,7 +125,7 @@ fun CreateChoreFormScreen(
                     // Title
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "Title",
+                            text = getRequiredLabel("Title"),
                             style = Typography.labelMedium,
                             color = Color.Black
                         )
@@ -144,7 +145,7 @@ fun CreateChoreFormScreen(
                     // Description
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "Description",
+                            text = getRequiredLabel("Description"),
                             style = Typography.labelMedium,
                             color = Color.Black
                         )
@@ -164,7 +165,7 @@ fun CreateChoreFormScreen(
                     // Assign To
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "Assign to",
+                            text = getRequiredLabel("Assign to"),
                             style = Typography.labelMedium,
                             color = Color.Black
                         )
@@ -223,7 +224,7 @@ fun CreateChoreFormScreen(
                     // Due Date
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "Due Date",
+                            text = getRequiredLabel("Due date"),
                             style = Typography.labelMedium,
                             color = Color.Black
                         )
@@ -371,7 +372,7 @@ fun CreateChoreFormScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Every",
+                                    text = getRequiredLabel("Every"),
                                     style = Typography.bodyLarge
                                 )
                                 
@@ -456,7 +457,7 @@ fun CreateChoreFormScreen(
                                       uiState.dueDate != null
 
                     FullWidthButtonWithIcon(
-                        text = "Save",
+                        text = "Save chore",
                         icon = Icons.Default.Check,
                         enabled = isFormValid && !uiState.isLoading,
                         onClick = {
