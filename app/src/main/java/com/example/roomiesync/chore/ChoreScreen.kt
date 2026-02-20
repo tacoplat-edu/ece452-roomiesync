@@ -53,7 +53,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,13 +71,11 @@ import com.example.roomiesync.ui.theme.ErrorRed
 import com.example.roomiesync.ui.theme.PrimaryGreen
 import com.example.roomiesync.ui.theme.Typography
 import com.example.roomiesync.ui.theme.WarningYellow
-import kotlinx.coroutines.launch
+import com.example.roomiesync.utils.getRelativeTimeText
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 
 @Composable
 fun ChoreScreen(
@@ -89,6 +86,7 @@ fun ChoreScreen(
     val uiState by viewModel.uiState.collectAsState()
     val queryParams by viewModel.queryParams.collectAsState()
     val focusManager = LocalFocusManager.current
+    var selectedChore by remember { mutableStateOf<ChoreAssignment?>(null) }
 
     var showSortSheet by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -157,7 +155,7 @@ fun ChoreScreen(
                         choreName = chore.title,
                         timeLeft = timeText,
                         status = visualStatus,
-                        onComplete = { viewModel.completeChore(choreAssignment.id) }
+                        onComplete = { selectedChore = choreAssignment }
                     )
                 }
             }
@@ -220,6 +218,18 @@ fun ChoreScreen(
                 }
             )
         }
+    }
+
+    if (selectedChore != null) {
+        ChoreSubmissionDialog(
+            choreAssignment = selectedChore!!,
+            onDismiss = { selectedChore = null },
+            onSubmit = { photoUri ->
+                // TODO: Upload the photo to S3 and report the link to the backend
+                viewModel.submitChore(selectedChore!!.id, photoUri)
+                selectedChore = null
+            }
+        )
     }
 }
 
@@ -286,7 +296,7 @@ fun SortSheetContent(
                     onDismissRequest = { isSortByExpanded = false },
                     modifier = Modifier.fillMaxWidth(0.9f)
                 ) {
-                    SortField.values().forEach { field ->
+                    SortField.entries.forEach { field ->
                         DropdownMenuItem(
                             text = { 
                                 Text(when (field) {
@@ -332,7 +342,7 @@ fun SortSheetContent(
                     onDismissRequest = { isDirectionExpanded = false },
                     modifier = Modifier.fillMaxWidth(0.9f)
                 ) {
-                    SortDirection.values().forEach { direction ->
+                    SortDirection.entries.forEach { direction ->
                         DropdownMenuItem(
                             text = { 
                                 Text(when (direction) {
@@ -548,23 +558,4 @@ fun FilterSheetContent(
             DatePicker(state = datePickerState)
         }
     }
-}
-
-private fun getRelativeTimeText(dueDate: Instant): String {
-    val now = Clock.System.now()
-    val duration = dueDate - now
-    val isOverdue = duration.isNegative()
-    val absDuration = duration.absoluteValue
-    
-    val days = absDuration.inWholeDays
-    val hours = absDuration.inWholeHours
-    val minutes = absDuration.inWholeMinutes
-    
-    val timeString = when {
-        days > 0 -> "$days days"
-        hours > 0 -> "$hours hours"
-        else -> "$minutes minutes"
-    }
-    
-    return if (isOverdue) "$timeString overdue" else "$timeString left"
 }
