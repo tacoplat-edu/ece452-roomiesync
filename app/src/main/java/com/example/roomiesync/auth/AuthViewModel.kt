@@ -2,6 +2,7 @@ package com.example.roomiesync.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.roomiesync.data.Profile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +29,7 @@ class AuthViewModel(
                     when (authState) {
                         is AuthState.Initializing -> AuthUiState.Loading
                         is AuthState.NotAuthenticated -> AuthUiState.ShowAuthScreen
-                        is AuthState.Authenticated -> AuthUiState.Authenticated(authState.user)
+                        is AuthState.Authenticated -> AuthUiState.Authenticated(authState.user, authState.profile)
                     }
                 }
             }
@@ -86,5 +87,5 @@ class AuthViewModel(
 sealed class AuthUiState {
     data object Loading : AuthUiState()
     data object ShowAuthScreen : AuthUiState()
-    data class Authenticated(val user: io.github.jan.supabase.auth.user.UserInfo) : AuthUiState()
+    data class Authenticated(val user: io.github.jan.supabase.auth.user.UserInfo, val profile: Profile? = null) : AuthUiState()
 }

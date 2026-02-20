@@ -11,11 +11,11 @@ data class CreateHousePayload(
 )
 
 @Serializable
-data class HouseRow(
+data class House(
     val id: String,
     val name: String,
     val address: String? = null,
-    @SerialName("join_code") val joinCode: String,
+    @SerialName("join_code") val joinCode: String? = null, // join_code can be null in DB but schema says unique, implied nullable? Schema: join_code text unique. It is not NOT NULL.
     @SerialName("created_by") val createdBy: String,
     @SerialName("created_at") val createdAt: String? = null
 )
@@ -29,4 +29,9 @@ data class JoinHouseByCodeParams(
 data class JoinHouseByCodeResponse(
     val ok: Boolean,
     val error: String? = null
+)
+
+@Serializable
+data class HouseMemberWithHouse(
+    val houses: House
 )
