@@ -2,4 +2,8 @@
 <resources>
 
     <style name="Theme.RoomieSync" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="SpinnerTimePicker" parent="android:Widget.Material.TimePicker">
+        <item name="android:timePickerMode">spinner</item>
+    </style>
 </resources>

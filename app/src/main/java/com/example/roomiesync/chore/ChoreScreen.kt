@@ -48,6 +48,7 @@ import kotlin.time.Instant
 @Composable
 fun ChoreScreen(
     viewModel: ChoreViewModel = viewModel(),
+    onAddChoreClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -149,7 +150,7 @@ fun ChoreScreen(
             FullWidthButtonWithIcon(
                 text = "Add a new chore",
                 icon = Icons.Outlined.AddCircle,
-                onClick = { viewModel.addChore() },
+                onClick = onAddChoreClick,
                 modifier = Modifier.fillMaxWidth()
             )
         }

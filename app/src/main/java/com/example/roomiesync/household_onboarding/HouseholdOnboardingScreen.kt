@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.roomiesync.R
 import com.example.roomiesync.ui.components.FullWidthButtonWithIcon
+import com.example.roomiesync.ui.components.getRequiredLabel
 import com.example.roomiesync.ui.theme.PrimaryGreen
 import com.example.roomiesync.ui.theme.SecondaryGrey
 import com.example.roomiesync.ui.theme.Typography
@@ -241,7 +242,7 @@ fun CreateHouseholdContent(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Household Name",
+                    text = getRequiredLabel("Household Name"),
                     style = Typography.labelMedium,
                     color = Color.Black
                 )
@@ -263,7 +264,7 @@ fun CreateHouseholdContent(
                province/state, country, zip) or Autocomplete field */
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Address",
+                    text = getRequiredLabel("Address"),
                     style = Typography.labelMedium,
                     color = Color.Black
                 )
@@ -402,7 +403,7 @@ fun JoinHouseholdContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Enter your household's\n 8-digit invite code",
+                    text = getRequiredLabel("Enter your household's\n 8-digit invite code"),
                     style = Typography.labelMedium,
                     color = Color.Black,
                     textAlign = TextAlign.Center,

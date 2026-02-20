@@ -4,11 +4,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.roomiesync.chore.ChoreScreen
+import com.example.roomiesync.chore.CreateChoreFormScreen
 import com.example.roomiesync.components.BottomNavBar
 import com.example.roomiesync.components.NavItem
 import com.example.roomiesync.household_onboarding.HouseholdOnboardingScreen
@@ -21,11 +24,20 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
     val userHasHouse = true // TODO: This should be retrieved from the user's profile
+
+    // Routes where the bottom navigation bar should be hidden
+    val routesWithoutBottomNav = setOf("create_chore")
 
     Scaffold(
         modifier = Modifier,
-        bottomBar = { if (userHasHouse) BottomNavBar(navController = navController) }
+        bottomBar = {
+            if (userHasHouse && currentRoute !in routesWithoutBottomNav) {
+                BottomNavBar(navController = navController)
+            }
+        }
     ) { innerPadding ->
         NavHost(
             navController = navController,
@@ -42,7 +54,14 @@ fun MainScreen(
                 )
             }
             composable(NavItem.Chores.route) {
-                ChoreScreen()
+                ChoreScreen(
+                    onAddChoreClick = { navController.navigate("create_chore") }
+                )
+            }
+            composable("create_chore") {
+                CreateChoreFormScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable(NavItem.Calendar.route) {
                 Text(text = "Calendar")
