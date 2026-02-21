@@ -4,6 +4,7 @@ import com.example.roomiesync.BuildConfig
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.auth.ExternalAuthAction
 
 object SupabaseClient {
@@ -18,5 +19,6 @@ object SupabaseClient {
             defaultExternalAuthAction = ExternalAuthAction.CustomTabs()
         }
         install(Postgrest)
+        install(Storage)
     }
 }

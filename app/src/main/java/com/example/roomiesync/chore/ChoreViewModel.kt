@@ -68,12 +68,16 @@ class ChoreViewModel : ViewModel() {
         applyFilters()
     }
 
-    fun completeChore(choreId: String) {
-        // Placeholder implementation
-//        _uiState.update { currentState ->
-//            val updatedChores = currentState.chores.filter { it.id != choreId }
-//            currentState.copy(chores = updatedChores)
-//        }
+    fun submitChore(choreId: String, photoUri: String) {
+        // In a real app, this would upload the photo and update the backend
+        // For now, we'll just remove the chore from the list locally
+        _uiState.update { currentState ->
+            // TODO: Evaluate submission logic and request backend; chore is marked as completed
+            val updatedChores = currentState.chores.filter { it.id != choreId }
+            // Also update our local source of truth
+            allChores = allChores.filter { it.id != choreId }
+            currentState.copy(chores = updatedChores)
+        }
     }
 
     fun addChore() {
