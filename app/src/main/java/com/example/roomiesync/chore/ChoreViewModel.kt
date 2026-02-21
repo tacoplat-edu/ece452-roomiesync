@@ -3,6 +3,7 @@
 package com.example.roomiesync.chore
 
 import androidx.lifecycle.ViewModel
+import com.example.roomiesync.ui.components.ChoreStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,15 +18,14 @@ class ChoreViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ChoreState())
     val uiState: StateFlow<ChoreState> = _uiState.asStateFlow()
     
+    private val _queryParams = MutableStateFlow(ChoreQueryParams())
+    val queryParams: StateFlow<ChoreQueryParams> = _queryParams.asStateFlow()
+    
     // Store the complete list of chores locally for filtering
     private var allChores: List<ChoreAssignment> = emptyList()
 
     init {
         // We'll use Clock.System.now() and assume it returns the compatible Instant type
-        // or we use java.time.Instant.now() if needed, but let's try the kotlin way first
-        // given the user's context about kotlin.time.Instant.
-        // If Clock.System.now() returns kotlinx.datetime.Instant and it's not assignment compatible,
-        // we might need conversion. But based on the deprecation warning, they might be the same underlying type now.
         val now = Clock.System.now()
         
         // Helper to create dummy chores
@@ -34,7 +34,8 @@ class ChoreViewModel : ViewModel() {
             title: String,
             description: String,
             status: String,
-            dueDate: Instant
+            dueDate: Instant,
+            assignedToId: String = "user-1"
         ): ChoreAssignment {
             val chore = Chore(
                 id = "chore-$id",
@@ -47,7 +48,7 @@ class ChoreViewModel : ViewModel() {
             return ChoreAssignment(
                 id = id,
                 choreId = chore.id,
-                assignedToId = "user-1",
+                assignedToId = assignedToId,
                 status = status,
                 dueDate = dueDate,
                 chore = chore
@@ -61,9 +62,10 @@ class ChoreViewModel : ViewModel() {
             createChoreAssignment("4", "Clean the master bathroom", "Scrub the toilet and sink", "NOT_URGENT", now.plus(3.days)),
             createChoreAssignment("5", "Clean the master bathroom", "Wipe down the mirror", "NOT_URGENT", now.plus(3.days)),
             createChoreAssignment("6", "Clean the master bathroom", "Mop the floor", "NOT_URGENT", now.plus(3.days)),
-            createChoreAssignment("7", "Clean the master bathroom", "Replenish toilet paper", "NOT_URGENT", now.plus(3.days))
+            createChoreAssignment("7", "Clean the master bathroom", "Replenish toilet paper", "NOT_URGENT", now.plus(3.days)),
+            createChoreAssignment("8", "Water plants", "Living room plants", "NOT_URGENT", now.plus(2.days), "user-2") // Someone else's chore
         )
-        _uiState.update { it.copy(chores = allChores) }
+        applyFilters()
     }
 
     fun completeChore(choreId: String) {
@@ -79,24 +81,80 @@ class ChoreViewModel : ViewModel() {
     }
 
     fun onSearchTextChanged(text: String) {
-        _uiState.update { 
-            it.copy(
-                searchText = text,
-                chores = filterChores(text)
-            ) 
-        }
+        _uiState.update { it.copy(searchText = text) }
+        applyFilters()
     }
     
-    private fun filterChores(query: String): List<ChoreAssignment> {
-        if (query.isBlank()) return allChores
-        return allChores.filter { assignment ->
-            val chore = assignment.chore ?: return@filter false
-            chore.title.contains(query, ignoreCase = true) || 
-            chore.description.contains(query, ignoreCase = true)
-        }
-    }
-
     fun onSearchFocusChanged(focused: Boolean) {
         _uiState.update { it.copy(isSearchFocused = focused) }
+    }
+    
+    fun updateQueryParams(params: ChoreQueryParams) {
+        _queryParams.value = params
+        applyFilters()
+    }
+    
+    private fun applyFilters() {
+        val params = _queryParams.value
+        val query = _uiState.value.searchText
+        
+        var filtered = allChores
+        
+        // 1. Text Search
+        if (query.isNotBlank()) {
+            filtered = filtered.filter { assignment ->
+                val chore = assignment.chore ?: return@filter false
+                chore.title.contains(query, ignoreCase = true) || 
+                chore.description.contains(query, ignoreCase = true)
+            }
+        }
+        
+        // 2. Statuses
+        if (params.statuses.isNotEmpty()) {
+            filtered = filtered.filter { assignment ->
+                 try {
+                    val status = ChoreStatus.valueOf(assignment.status)
+                    params.statuses.contains(status)
+                } catch (e: Exception) {
+                    false
+                }
+            }
+        }
+        
+        // 3. Assigned to me
+        if (params.assignedToMeOnly) {
+            filtered = filtered.filter { it.assignedToId == "user-1" } // Assuming current user is "user-1"
+        }
+        
+        // 4. Date Range
+        if (params.dueDateStart != null) {
+            val startInstant = Instant.fromEpochMilliseconds(params.dueDateStart)
+            filtered = filtered.filter { it.dueDate >= startInstant }
+        }
+        if (params.dueDateEnd != null) {
+            val endInstant = Instant.fromEpochMilliseconds(params.dueDateEnd)
+            filtered = filtered.filter { it.dueDate <= endInstant }
+        }
+        
+        // 5. Sorting
+        filtered = when (params.sortBy) {
+            SortField.CHORE_NAME -> {
+                if (params.sortDirection == SortDirection.ASCENDING) {
+                    filtered.sortedBy { it.chore?.title }
+                } else {
+                    filtered.sortedByDescending { it.chore?.title }
+                }
+            }
+            SortField.TIME_UNTIL_DUE -> {
+                if (params.sortDirection == SortDirection.ASCENDING) {
+                    filtered.sortedBy { it.dueDate }
+                } else {
+                    filtered.sortedByDescending { it.dueDate }
+                }
+            }
+            null -> filtered
+        }
+        
+        _uiState.update { it.copy(chores = filtered) }
     }
 }
