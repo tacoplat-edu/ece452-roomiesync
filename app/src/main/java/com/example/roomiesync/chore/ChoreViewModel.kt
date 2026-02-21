@@ -68,10 +68,6 @@ class ChoreViewModel : ViewModel() {
         applyFilters()
     }
 
-    fun completeChore(choreId: String) {
-        // This is replaced by submitChore
-    }
-
     fun submitChore(choreId: String, photoUri: String) {
         // In a real app, this would upload the photo and update the backend
         // For now, we'll just remove the chore from the list locally
