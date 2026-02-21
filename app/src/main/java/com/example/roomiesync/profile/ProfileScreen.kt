@@ -1,5 +1,8 @@
 package com.example.roomiesync.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChangeCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,14 +31,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.roomiesync.data.House
+import com.example.roomiesync.ui.components.CircularIconButton
 import com.example.roomiesync.ui.components.HouseholdInfoCard
 import com.example.roomiesync.ui.components.RectangularButton
 import com.example.roomiesync.ui.theme.SecondaryGrey
+import com.example.roomiesync.ui.theme.PrimaryGreen
 
 @Composable
 fun ProfileScreen(
@@ -44,6 +52,17 @@ fun ProfileScreen(
     onCloseClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                // In a real app we'd upload the image somewhere and get an actual URL.
+                // For now, we store the local URI as string since Supabase storage might not be set up fully here.
+                viewModel.updateAvatarUrl(uri.toString())
+            }
+        }
+    )
     
     Column(
         modifier = Modifier
@@ -78,11 +97,43 @@ fun ProfileScreen(
         
         // Avatar
         Box(
-            modifier = Modifier
-                .size(100.dp)
-                .clip(CircleShape)
-                .background(Color.Gray) // Placeholder
-        )
+            modifier = Modifier.size(100.dp)
+        ) {
+            val avatarUrl = uiState.profile?.avatarUrl
+            if (!avatarUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = "Avatar",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(Color.Gray)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(Color.Gray) // Placeholder
+                )
+            }
+            
+            CircularIconButton(
+                icon = Icons.Default.ChangeCircle,
+                contentDescription = "Change avatar",
+                onClick = {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(32.dp),
+                backgroundColor = PrimaryGreen,
+                iconTint = Color.White
+            )
+        }
         
         Spacer(modifier = Modifier.height(16.dp))
         

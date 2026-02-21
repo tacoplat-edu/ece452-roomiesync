@@ -15,7 +15,8 @@ import kotlinx.coroutines.launch
 
 class ProfileViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
-    private val houseRepository: HouseRepository = HouseRepository(AuthRepository())
+    private val houseRepository: HouseRepository = HouseRepository(AuthRepository()),
+    private val profileRepository: ProfileRepository = ProfileRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -31,7 +32,7 @@ class ProfileViewModel(
             
             val user = authRepository.currentUser()
             if (user != null) {
-                val profile = ProfileRepository().getProfile(user.id)
+                val profile = profileRepository.getProfile(user.id)
                 val house = houseRepository.getUserHouse()
                 
                 _uiState.update { 
@@ -44,6 +45,18 @@ class ProfileViewModel(
             } else {
                 _uiState.update { it.copy(isLoading = false) }
             }
+        }
+    }
+
+    fun updateAvatarUrl(url: String) {
+        val currentProfile = _uiState.value.profile ?: return
+        val updatedProfile = currentProfile.copy(avatarUrl = url)
+        
+        viewModelScope.launch {
+            // Optimistically update UI
+            _uiState.update { it.copy(profile = updatedProfile) }
+            // Save to database
+            profileRepository.updateProfile(updatedProfile)
         }
     }
 }
