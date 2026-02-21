@@ -35,6 +35,7 @@ import com.example.roomiesync.components.NavItem
 import com.example.roomiesync.data.Profile
 import com.example.roomiesync.household_onboarding.HouseholdOnboardingScreen
 import com.example.roomiesync.profile.ProfileScreen
+import com.example.roomiesync.profile.EditProfileScreen
 import io.github.jan.supabase.auth.user.UserInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +53,7 @@ fun MainScreen(
 
     // Routes where the bottom navigation bar and top bar should be hidden
     // We treat "profile" as a screen without the main bars (similar to Create Chore)
-    val routesWithoutBars = setOf("create_chore", "household_onboarding", "profile")
+    val routesWithoutBars = setOf("create_chore", "household_onboarding", "profile", "edit_profile")
 
     val showBars by remember(currentRoute) {
         derivedStateOf { currentRoute !in routesWithoutBars }
@@ -156,9 +157,14 @@ fun MainScreen(
             }
             composable("profile") {
                 ProfileScreen(
-                    onEditProfileClick = { /* TODO */ },
+                    onEditProfileClick = { navController.navigate("edit_profile") },
                     onHouseholdClick = { /* TODO */ },
                     onCloseClick = { navController.popBackStack() }
+                )
+            }
+            composable("edit_profile") {
+                EditProfileScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
         }

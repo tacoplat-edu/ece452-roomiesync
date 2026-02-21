@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.roomiesync.ui.components.FullWidthButtonWithIcon
+import com.example.roomiesync.utils.validation.FormValidation
 
 @Composable
 fun AuthScreen(
@@ -51,6 +52,16 @@ fun AuthScreen(
             kotlinx.coroutines.delay(100)
             scrollState.animateScrollTo(scrollState.maxValue)
         }
+    }
+
+    val isEmailError = email.isNotBlank() && !FormValidation.isValidEmail(email)
+    val isPasswordError = password.isNotBlank() && !FormValidation.isValidPassword(password)
+    val isConfirmPasswordError = isSignUp && confirmPassword.isNotBlank() && confirmPassword != password
+
+    val isFormValid = if (isSignUp) {
+        FormValidation.isValidEmail(email) && FormValidation.isValidPassword(password) && password == confirmPassword
+    } else {
+        FormValidation.isValidEmail(email) && password.isNotBlank()
     }
 
     Column(
@@ -80,9 +91,19 @@ fun AuthScreen(
             onValueChange = { email = it },
             label = { Text("Email") },
             singleLine = true,
+            isError = isEmailError,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth()
         )
+        if (isEmailError) {
+            Text(
+                text = "Please enter a valid email address.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp)
+            )
+        }
+        
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -90,10 +111,19 @@ fun AuthScreen(
             onValueChange = { password = it },
             label = { Text("Password") },
             singleLine = true,
+            isError = isSignUp && isPasswordError,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth()
         )
+        if (isSignUp && isPasswordError) {
+            Text(
+                text = "Password must be at least 6 characters.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp)
+            )
+        }
 
         if (isSignUp) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -102,10 +132,19 @@ fun AuthScreen(
                 onValueChange = { confirmPassword = it },
                 label = { Text("Confirm password") },
                 singleLine = true,
+                isError = isConfirmPasswordError,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth()
             )
+            if (isConfirmPasswordError) {
+                Text(
+                    text = "Passwords do not match.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp)
+                )
+            }
         }
 
         message?.let { msg ->
@@ -129,6 +168,7 @@ fun AuthScreen(
                     viewModel.signIn(email, password)
                 }
             },
+            enabled = isFormValid,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(if (isSignUp) "Create account" else "Sign in")
