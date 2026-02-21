@@ -190,6 +190,14 @@ fun ChoreScreen(
                 currentParams = queryParams,
                 onParamsChange = { newParams ->
                     viewModel.updateQueryParams(newParams)
+                },
+                onReset = {
+                    viewModel.updateQueryParams(
+                        queryParams.copy(
+                            sortBy = SortField.TIME_UNTIL_DUE,
+                            sortDirection = SortDirection.ASCENDING
+                        )
+                    )
                 }
             )
         }
@@ -218,7 +226,8 @@ fun ChoreScreen(
 @Composable
 fun SortSheetContent(
     currentParams: ChoreQueryParams,
-    onParamsChange: (ChoreQueryParams) -> Unit
+    onParamsChange: (ChoreQueryParams) -> Unit,
+    onReset: () -> Unit
 ) {
     val sortBy = currentParams.sortBy ?: SortField.TIME_UNTIL_DUE
     val sortDirection = currentParams.sortDirection
@@ -232,11 +241,22 @@ fun SortSheetContent(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Sort Chores",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Sort Chores",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            if (sortBy != SortField.TIME_UNTIL_DUE || sortDirection != SortDirection.ASCENDING) {
+                TextButton(onClick = onReset) {
+                    Text("Reset", color = PrimaryGreen)
+                }
+            }
+        }
 
         // Sort By Dropdown
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -365,8 +385,10 @@ fun FilterSheetContent(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            TextButton(onClick = onReset) {
-                Text("Reset", color = PrimaryGreen)
+            if (statuses.isNotEmpty() || !assignedToMeOnly || startDate != null || endDate != null) {
+                TextButton(onClick = onReset) {
+                    Text("Reset", color = PrimaryGreen)
+                }
             }
         }
 
