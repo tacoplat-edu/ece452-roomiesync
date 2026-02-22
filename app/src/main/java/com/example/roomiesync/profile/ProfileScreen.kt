@@ -41,6 +41,7 @@ import com.example.roomiesync.data.House
 import com.example.roomiesync.ui.components.CircularIconButton
 import com.example.roomiesync.ui.components.HouseholdInfoCard
 import com.example.roomiesync.ui.components.RectangularButton
+import com.example.roomiesync.ui.theme.PrimaryBackground
 import com.example.roomiesync.ui.theme.SecondaryGrey
 import com.example.roomiesync.ui.theme.PrimaryGreen
 
@@ -67,7 +68,7 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
+            .background(color = PrimaryBackground)
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

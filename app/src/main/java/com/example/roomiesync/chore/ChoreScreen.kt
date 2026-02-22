@@ -69,6 +69,7 @@ import com.example.roomiesync.ui.components.FullWidthButtonWithIcon
 import com.example.roomiesync.ui.components.PillButton
 import com.example.roomiesync.ui.components.SearchTextField
 import com.example.roomiesync.ui.theme.ErrorRed
+import com.example.roomiesync.ui.theme.PrimaryBackground
 import com.example.roomiesync.ui.theme.PrimaryGreen
 import com.example.roomiesync.ui.theme.Typography
 import com.example.roomiesync.ui.theme.WarningYellow
@@ -95,7 +96,7 @@ fun ChoreScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5)) // Background color from design
+            .background(color = PrimaryBackground)
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
