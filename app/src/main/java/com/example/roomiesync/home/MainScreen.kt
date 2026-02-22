@@ -36,6 +36,7 @@ import com.example.roomiesync.data.Profile
 import com.example.roomiesync.household_onboarding.HouseholdOnboardingScreen
 import com.example.roomiesync.profile.ProfileScreen
 import com.example.roomiesync.profile.EditProfileScreen
+import com.example.roomiesync.ui.theme.PrimaryBackground
 import io.github.jan.supabase.auth.user.UserInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,6 +61,7 @@ fun MainScreen(
     }
 
     val title = when (currentRoute) {
+        NavItem.Home.route -> "RoomieSync"
         NavItem.Chores.route -> "Chores"
         NavItem.Calendar.route -> "Calendar"
         NavItem.Bills.route -> "Bills"
@@ -70,7 +72,7 @@ fun MainScreen(
     val isTitleEmpty = title.isEmpty()
 
     Scaffold(
-        modifier = modifier,
+        modifier = Modifier,
         topBar = {
             if (showBars) {
                 TopAppBar(
@@ -111,7 +113,7 @@ fun MainScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFFF5F5F5) // Match background color of screens
+                        containerColor = PrimaryBackground
                     ),
                 )
             }
@@ -133,7 +135,6 @@ fun MainScreen(
             composable(NavItem.Home.route) {
                 HomeScreen(
                     user = user,
-                    onSignOut = onSignOut
                 )
             }
             composable(NavItem.Chores.route) {
