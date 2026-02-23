@@ -142,6 +142,7 @@ fun ChoreSubmissionDialog(
                                 ChoreStatus.NOT_URGENT -> Color.Black
                                 ChoreStatus.URGENT -> WarningYellow
                                 ChoreStatus.OVERDUE -> ErrorRed
+                                ChoreStatus.PENDING_APPROVAL -> Color(0xFF2196F3)
                             }
 
                             Text(

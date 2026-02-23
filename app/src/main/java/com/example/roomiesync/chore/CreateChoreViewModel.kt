@@ -1,13 +1,20 @@
 package com.example.roomiesync.chore
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.roomiesync.data.ChoreRepository
+import com.example.roomiesync.data.Profile
+import com.example.roomiesync.data.SupabaseClient
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlin.time.Instant
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 enum class CreateChoreRecurrenceType {
     ONE_TIME,
@@ -20,14 +27,6 @@ enum class RecurrenceUnit(val label: String) {
     MONTHS("Months")
 }
 
-@Serializable
-data class Profile(
-    val id: String,
-    val email: String,
-    @SerialName("display_name") val displayName: String,
-    @SerialName("created_at") val createdAt: String // simplified for now
-)
-
 data class CreateChoreState(
     val title: String = "",
     val description: String = "",
@@ -36,24 +35,41 @@ data class CreateChoreState(
     val recurrenceUnit: RecurrenceUnit = RecurrenceUnit.DAYS,
     val members: List<Profile> = emptyList(),
     val assignedTo: Profile? = null,
-    val dueDate: Long? = null, // Epoch millis for DatePicker
+    val dueDate: Long? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
 
-class CreateChoreViewModel : ViewModel() {
+class CreateChoreViewModel(
+    private val choreRepository: ChoreRepository = ChoreRepository()
+) : ViewModel() {
     private val _uiState = MutableStateFlow(CreateChoreState())
     val uiState: StateFlow<CreateChoreState> = _uiState.asStateFlow()
 
+    private var houseId: String? = null
+
     init {
-        // TODO: Pull user profiles from API
-        // Mock data for members
-        val mockProfiles = listOf(
-            Profile("1", "alice@example.com", "Alice", "2023-01-01T00:00:00Z"),
-            Profile("2", "bob@example.com", "Bob", "2023-01-02T00:00:00Z"),
-            Profile("3", "charlie@example.com", "Charlie", "2023-01-03T00:00:00Z")
-        )
-        _uiState.update { it.copy(members = mockProfiles) }
+        loadHouseMembers()
+    }
+
+    private fun loadHouseMembers() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val userId = SupabaseClient.client.auth.currentUserOrNull()?.id ?: return@launch
+                val house = choreRepository.getUserHouse(userId)
+                houseId = house?.id
+                if (house != null) {
+                    val members = choreRepository.getHouseMembers(house.id)
+                    _uiState.update { it.copy(members = members, isLoading = false) }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "No household found") }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            }
+        }
     }
 
     fun updateTitle(title: String) {
@@ -87,23 +103,25 @@ class CreateChoreViewModel : ViewModel() {
     }
 
     fun saveChore(onSuccess: () -> Unit) {
-        // Validation logic
         val currentState = _uiState.value
+        val currentHouseId = houseId
+
         if (currentState.title.isBlank() || currentState.description.isBlank()) {
             _uiState.update { it.copy(errorMessage = "Title and description cannot be empty") }
             return
         }
-        
         if (currentState.assignedTo == null) {
-             _uiState.update { it.copy(errorMessage = "Please assign the chore to someone") }
-             return
+            _uiState.update { it.copy(errorMessage = "Please assign the chore to someone") }
+            return
         }
-        
         if (currentState.dueDate == null) {
-             _uiState.update { it.copy(errorMessage = "Please select a due date") }
-             return
+            _uiState.update { it.copy(errorMessage = "Please select a due date") }
+            return
         }
-
+        if (currentHouseId == null) {
+            _uiState.update { it.copy(errorMessage = "No household found") }
+            return
+        }
         if (currentState.isRecurring) {
             val interval = currentState.recurrenceInterval.toIntOrNull()
             if (interval == null || interval <= 0) {
@@ -114,12 +132,32 @@ class CreateChoreViewModel : ViewModel() {
 
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-        // Simulate network call or DB operation
-        // In a real app, you would call a repository here
-        // For now, we'll just simulate success
-        // TODO: Submit form data to API
+        viewModelScope.launch {
+            val recurrenceType = if (currentState.isRecurring) {
+                "${currentState.recurrenceInterval}_${currentState.recurrenceUnit.name.lowercase()}"
+            } else {
+                "none"
+            }
 
-        _uiState.update { it.copy(isLoading = false) }
-        onSuccess()
+            val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
+            val dueDateIso = isoFormat.format(Date(currentState.dueDate))
+
+            choreRepository.createChoreWithAssignment(
+                houseId = currentHouseId,
+                title = currentState.title,
+                description = currentState.description,
+                recurrenceType = recurrenceType,
+                assignedToId = currentState.assignedTo.id,
+                dueDateIso = dueDateIso
+            ).onSuccess {
+                _uiState.update { it.copy(isLoading = false) }
+                onSuccess()
+            }.onFailure { e ->
+                e.printStackTrace()
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to save chore") }
+            }
+        }
     }
 }

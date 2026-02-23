@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
 
     if (uiState.isLoading) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -154,10 +159,14 @@ fun HomeScreen(
 
 @Composable
 fun ChoreCard(assignment: ChoreAssignment) {
-    val status = try { ChoreStatus.valueOf(assignment.status) } catch (e: Exception) { ChoreStatus.URGENT }
-    val isOverdue = status == ChoreStatus.OVERDUE
-    val cardColor = if (isOverdue) ErrorRed.copy(alpha = 0.1f) else WarningYellow.copy(alpha = 0.1f)
-    val textColor = if (isOverdue) ErrorRed else WarningYellow
+    val status = try { ChoreStatus.valueOf(assignment.status) } catch (e: Exception) { ChoreStatus.NOT_URGENT }
+
+    val (cardColor, textColor, label) = when (status) {
+        ChoreStatus.OVERDUE -> Triple(ErrorRed.copy(alpha = 0.1f), ErrorRed, "OVERDUE")
+        ChoreStatus.URGENT -> Triple(WarningYellow.copy(alpha = 0.1f), WarningYellow, "DUE SOON")
+        ChoreStatus.PENDING_APPROVAL -> Triple(Color(0xFF2196F3).copy(alpha = 0.1f), Color(0xFF2196F3), "PENDING")
+        ChoreStatus.NOT_URGENT -> Triple(PrimaryGreen.copy(alpha = 0.1f), PrimaryGreen, "TO DO")
+    }
 
     Card(
         modifier = Modifier
@@ -174,14 +183,14 @@ fun ChoreCard(assignment: ChoreAssignment) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Warning,
+                    imageVector = if (status == ChoreStatus.NOT_URGENT) Icons.Default.CheckCircle else Icons.Default.Warning,
                     contentDescription = null,
                     tint = textColor,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = if (isOverdue) "OVERDUE" else "DUE SOON",
+                    text = label,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor

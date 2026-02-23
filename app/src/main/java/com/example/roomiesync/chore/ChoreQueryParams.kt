@@ -16,7 +16,7 @@ data class ChoreQueryParams(
     val sortBy: SortField? = SortField.TIME_UNTIL_DUE,
     val sortDirection: SortDirection = SortDirection.ASCENDING,
     val statuses: Set<ChoreStatus> = emptySet(),
-    val assignedToMeOnly: Boolean = true,
+    val assignedToMeOnly: Boolean = false,
     val dueDateStart: Long? = null,
     val dueDateEnd: Long? = null
 )
