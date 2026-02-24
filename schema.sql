@@ -140,7 +140,26 @@ create policy "Houses: insert as creator" on public.houses for insert with check
 create policy "House members: view if member" on public.house_members for select using (public.is_member_of_house(house_id));
 create policy "House members: insert self" on public.house_members for insert with check (auth.uid() = user_id);
 
+-- Chores: house members can view and insert; only creator or admin can update
 create policy "Chores: view if member" on public.chores for select using (public.is_member_of_house(house_id));
+create policy "Chores: insert if member" on public.chores for insert with check (public.is_member_of_house(house_id));
+
+-- Chore assignments: house members can view and insert; assignee can update (submit proof); any member can update (approve)
+create policy "Chore assignments: view if member" on public.chore_assignments for select
+  using (exists (select 1 from public.chores c where c.id = chore_assignments.chore_id and public.is_member_of_house(c.house_id)));
+create policy "Chore assignments: insert if member" on public.chore_assignments for insert
+  with check (exists (select 1 from public.chores c where c.id = chore_id and public.is_member_of_house(c.house_id)));
+create policy "Chore assignments: update if member" on public.chore_assignments for update
+  using (exists (select 1 from public.chores c where c.id = chore_assignments.chore_id and public.is_member_of_house(c.house_id)));
+
+-- Also let house members view each other's profiles (needed for assignee lists)
+create policy "Profiles: view housemates" on public.profiles for select
+  using (exists (
+    select 1 from public.house_members hm1
+    join public.house_members hm2 on hm1.house_id = hm2.house_id
+    where hm1.user_id = auth.uid() and hm2.user_id = profiles.id
+  ));
+
 create policy "Expenses: view if member" on public.expenses for select using (public.is_member_of_house(house_id));
 
 -- 7. THE JOIN FUNCTION (RPC)

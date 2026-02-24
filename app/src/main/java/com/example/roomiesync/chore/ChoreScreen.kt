@@ -50,6 +50,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,7 +74,9 @@ import com.example.roomiesync.ui.theme.PrimaryBackground
 import com.example.roomiesync.ui.theme.PrimaryGreen
 import com.example.roomiesync.ui.theme.Typography
 import com.example.roomiesync.ui.theme.WarningYellow
+import com.example.roomiesync.data.SupabaseClient
 import com.example.roomiesync.utils.getRelativeTimeText
+import io.github.jan.supabase.auth.auth
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -89,6 +92,11 @@ fun ChoreScreen(
     val queryParams by viewModel.queryParams.collectAsState()
     val focusManager = LocalFocusManager.current
     var selectedChore by remember { mutableStateOf<ChoreAssignment?>(null) }
+    val currentUserId = remember { SupabaseClient.client.auth.currentUserOrNull()?.id }
+
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
 
     var showSortSheet by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -143,10 +151,8 @@ fun ChoreScreen(
             items(uiState.chores) { choreAssignment ->
                 val chore = choreAssignment.chore
                 if (chore != null) {
-                    // Calculate time left
                     val timeText = getRelativeTimeText(choreAssignment.dueDate)
-                    
-                    // Map status string to ChoreStatus enum
+
                     val visualStatus = try {
                         ChoreStatus.valueOf(choreAssignment.status)
                     } catch (e: IllegalArgumentException) {
@@ -157,7 +163,15 @@ fun ChoreScreen(
                         choreName = chore.title,
                         timeLeft = timeText,
                         status = visualStatus,
-                        onComplete = { selectedChore = choreAssignment }
+                        onComplete = {
+                            if (visualStatus == ChoreStatus.PENDING_APPROVAL
+                                && choreAssignment.assignedToId != currentUserId
+                            ) {
+                                viewModel.approveChore(choreAssignment.id)
+                            } else if (visualStatus != ChoreStatus.PENDING_APPROVAL) {
+                                selectedChore = choreAssignment
+                            }
+                        }
                     )
                 }
             }
@@ -411,10 +425,11 @@ fun FilterSheetContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(ChoreStatus.URGENT, ChoreStatus.OVERDUE).forEach { status ->
+                listOf(ChoreStatus.URGENT, ChoreStatus.OVERDUE, ChoreStatus.PENDING_APPROVAL).forEach { status ->
                     val color = when (status) {
                         ChoreStatus.URGENT -> WarningYellow
                         ChoreStatus.OVERDUE -> ErrorRed
+                        ChoreStatus.PENDING_APPROVAL -> Color(0xFF2196F3)
                         else -> PrimaryGreen
                     }
                     

@@ -33,7 +33,8 @@ import com.example.roomiesync.ui.theme.WarningYellow
 enum class ChoreStatus {
     NOT_URGENT,
     URGENT,
-    OVERDUE
+    OVERDUE,
+    PENDING_APPROVAL
 }
 
 @Composable
@@ -45,10 +46,12 @@ fun ChoreListItem(
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val isPending = status == ChoreStatus.PENDING_APPROVAL
     val (primaryColor, secondaryColor) = when (status) {
         ChoreStatus.NOT_URGENT -> PrimaryGreen to Color.Black
         ChoreStatus.URGENT -> WarningYellow to WarningYellow
         ChoreStatus.OVERDUE -> ErrorRed to ErrorRed
+        ChoreStatus.PENDING_APPROVAL -> Color(0xFF2196F3) to Color(0xFF2196F3)
     }
 
     Box(
@@ -74,7 +77,7 @@ fun ChoreListItem(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = timeLeft,
+                text = if (isPending) "Awaiting approval" else timeLeft,
                 color = if (status == ChoreStatus.NOT_URGENT) Color.Black else secondaryColor,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
@@ -85,7 +88,6 @@ fun ChoreListItem(
             modifier = Modifier.align(Alignment.CenterEnd),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
             Box(
                 modifier = Modifier
                     .size(24.dp)
@@ -101,7 +103,6 @@ fun ChoreListItem(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Completion Button
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -112,7 +113,7 @@ fun ChoreListItem(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Check,
-                    contentDescription = "Complete Chore",
+                    contentDescription = if (isPending) "Approve Chore" else "Complete Chore",
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )

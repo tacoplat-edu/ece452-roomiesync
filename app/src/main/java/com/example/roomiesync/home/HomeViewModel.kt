@@ -6,20 +6,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.roomiesync.chore.Chore
 import com.example.roomiesync.chore.ChoreAssignment
-import com.example.roomiesync.data.House
-import com.example.roomiesync.data.Profile
-import kotlinx.coroutines.delay
+import com.example.roomiesync.data.ChoreRepository
+import com.example.roomiesync.data.ProfileRepository
+import com.example.roomiesync.data.SupabaseClient
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
-import kotlin.time.Clock
+import kotlin.time.Instant
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(
+    private val choreRepository: ChoreRepository = ChoreRepository(),
+    private val profileRepository: ProfileRepository = ProfileRepository()
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeState())
     val uiState: StateFlow<HomeState> = _uiState.asStateFlow()
@@ -28,104 +31,92 @@ class HomeViewModel : ViewModel() {
         loadDashboardData()
     }
 
+    fun refresh() {
+        loadDashboardData()
+    }
+
     private fun loadDashboardData() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            // Use dummy data for now
+            try {
+                val userId = SupabaseClient.client.auth.currentUserOrNull()?.id
+                if (userId == null) {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "Not authenticated") }
+                    return@launch
+                }
 
-            // Add a delay
-            delay(800)
+                val profile = profileRepository.getProfile(userId)
 
-            val now = Clock.System.now()
-            val nowMillis = System.currentTimeMillis()
+                val house = choreRepository.getUserHouse(userId)
+                if (house == null) {
+                    _uiState.update { it.copy(isLoading = false, profile = profile, errorMessage = "No household found") }
+                    return@launch
+                }
 
-            val profile = Profile(
-                id = "user-1",
-                email = "tom@example.com",
-                displayName = "Tom",
-            )
+                val assignmentRows = choreRepository.getChoreAssignments(house.id)
 
-            val house = House(
-                id = "house-1",
-                name = "Tom's house",
-                address = "123 University Ave, Waterloo",
-                createdBy = "user-1"
-            )
+                val choreAssignments = assignmentRows.mapNotNull { row ->
+                    val choreData = row.chores ?: return@mapNotNull null
+                    val dueInstant = try {
+                        Instant.parse(row.dueDate ?: return@mapNotNull null)
+                    } catch (_: Exception) { return@mapNotNull null }
 
-            // Dummy chores
-            val chore1 = ChoreAssignment(
-                id = "c1",
-                choreId = "chore-1",
-                assignedToId = "user-1",
-                status = "OVERDUE",
-                dueDate = now.minus(1.days),
-                chore = Chore(id = "chore-1", houseId = "house-1", title = "Take out the trash", description = "", recurrenceType = "weekly", createdAt = now)
-            )
-            val chore2 = ChoreAssignment(
-                id = "c2",
-                choreId = "chore-2",
-                assignedToId = "user-1",
-                status = "URGENT",
-                dueDate = now.plus(3.hours),
-                chore = Chore(id = "chore-2", houseId = "house-1", title = "Clean kitchen counters", description = "", recurrenceType = "daily", createdAt = now)
-            )
-            val chore3 = ChoreAssignment(
-                id = "c3",
-                choreId = "chore-3",
-                assignedToId = "user-2",
-                status = "URGENT",
-                dueDate = now.plus(5.hours),
-                chore = Chore(id = "chore-3", houseId = "house-1", title = "Mop the kitchen", description = "", recurrenceType = "daily", createdAt = now)
-            )
+                    val now = kotlin.time.Clock.System.now()
+                    val uiStatus = when (row.status) {
+                        "completed" -> "COMPLETED"
+                        "pending_approval" -> "PENDING_APPROVAL"
+                        else -> when {
+                            dueInstant < now -> "OVERDUE"
+                            dueInstant - now < 24.hours -> "URGENT"
+                            else -> "NOT_URGENT"
+                        }
+                    }
 
-            // Dummy activity data
-            val activities = listOf(
-                ActivityFeedItem(
-                    id = "a1",
-                    title = "Bob completed a chore",
-                    description = "Vacuum the living room",
-                    timestampMillis = nowMillis - (1000 * 60 * 30), // 30 mins ago
-                    iconType = ActivityIconType.CHORE_COMPLETED
-                ),
-                ActivityFeedItem(
-                    id = "a2",
-                    title = "Charlie added a new bill",
-                    description = "Hydro ($45.00 each)",
-                    timestampMillis = nowMillis - (1000 * 60 * 60 * 5), // 5 hours ago
-                    iconType = ActivityIconType.BILL_PAID
-                ),
-                ActivityFeedItem(
-                    id = "a3",
-                    title = "Peter sent a message",
-                    description = "Won't be home tomorrow",
-                    timestampMillis = nowMillis - (1000 * 60 * 60 * 24 * 2), // 2 days ago
-                    iconType = ActivityIconType.CHAT
-                ),
-                ActivityFeedItem(
-                    id = "a4",
-                    title = "Peter added a chore",
-                    description = "Take out trash",
-                    timestampMillis = nowMillis - (1000 * 60 * 60 * 24 * 2), // 2 days ago
-                    iconType = ActivityIconType.CHORE_ADDED
-                ),
-                ActivityFeedItem(
-                    id = "a5",
-                    title = "Jack sent a message",
-                    description = "Going to class.",
-                    timestampMillis = nowMillis - (1000 * 60 * 60 * 24 * 3), // 3 days ago
-                    iconType = ActivityIconType.CHAT
+                    ChoreAssignment(
+                        id = row.id,
+                        choreId = row.choreId,
+                        assignedToId = row.assignedToId,
+                        status = uiStatus,
+                        proofPhotoUrl = row.proofPhotoUrl,
+                        verifiedBy = row.verifiedBy,
+                        dueDate = dueInstant,
+                        completedAt = row.completedAt?.let { try { Instant.parse(it) } catch (_: Exception) { null } },
+                        chore = Chore(
+                            id = choreData.id,
+                            houseId = choreData.houseId,
+                            title = choreData.title,
+                            description = choreData.description ?: "",
+                            recurrenceType = choreData.recurrenceType ?: "none",
+                            createdAt = try { Instant.parse(choreData.createdAt ?: "") } catch (_: Exception) { now }
+                        )
+                    )
+                }
+
+                val todoChores = choreAssignments.filter {
+                    it.assignedToId == userId && it.status != "COMPLETED" && it.status != "PENDING_APPROVAL"
+                }
+
+                val nowMillis = System.currentTimeMillis()
+                val activities = listOf(
+                    ActivityFeedItem("a1", "Bob completed a chore", "Vacuum the living room", nowMillis - (1000 * 60 * 30), ActivityIconType.CHORE_COMPLETED),
+                    ActivityFeedItem("a2", "Charlie added a new bill", "Hydro (\$45.00 each)", nowMillis - (1000 * 60 * 60 * 5), ActivityIconType.BILL_PAID),
+                    ActivityFeedItem("a3", "Peter sent a message", "Won't be home tomorrow", nowMillis - (1000 * 60 * 60 * 24 * 2), ActivityIconType.CHAT),
                 )
-            )
 
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    profile = profile,
-                    house = house,
-                    chores = listOf(chore1, chore2, chore3),
-                    recentActivity = activities
-                )
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        profile = profile,
+                        house = house,
+                        chores = todoChores,
+                        recentActivity = activities,
+                        errorMessage = null
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to load data") }
             }
         }
     }

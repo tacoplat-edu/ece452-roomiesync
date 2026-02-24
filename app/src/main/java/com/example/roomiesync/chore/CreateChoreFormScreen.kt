@@ -208,7 +208,7 @@ fun CreateChoreFormScreen(
                                                     contentDescription = null,
                                                     modifier = Modifier.padding(end = 8.dp)
                                                 )
-                                                Text(text = profile.displayName)
+                                                Text(text = profile.displayName ?: profile.email ?: "Unknown")
                                             }
                                         },
                                         onClick = {
