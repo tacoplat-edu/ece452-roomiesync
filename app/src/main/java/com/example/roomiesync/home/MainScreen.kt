@@ -28,6 +28,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.roomiesync.billing.BillingScreen
+import com.example.roomiesync.billing.CreateExpenseScreen
 import com.example.roomiesync.chore.ChoreScreen
 import com.example.roomiesync.chore.CreateChoreFormScreen
 import com.example.roomiesync.components.BottomNavBar
@@ -54,7 +56,7 @@ fun MainScreen(
 
     // Routes where the bottom navigation bar and top bar should be hidden
     // We treat "profile" as a screen without the main bars (similar to Create Chore)
-    val routesWithoutBars = setOf("create_chore", "household_onboarding", "profile", "edit_profile")
+    val routesWithoutBars = setOf("create_chore", "create_expense", "household_onboarding", "profile", "edit_profile")
 
     val showBars by remember(currentRoute) {
         derivedStateOf { currentRoute !in routesWithoutBars }
@@ -151,7 +153,14 @@ fun MainScreen(
                 Text(text = "Calendar")
             }
             composable(NavItem.Bills.route) {
-                Text(text = "Bills")
+                BillingScreen(
+                    onAddExpenseClick = { navController.navigate("create_expense") }
+                )
+            }
+            composable("create_expense") {
+                CreateExpenseScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable(NavItem.Chat.route) {
                 Text(text = "Chat")
