@@ -61,7 +61,7 @@ fun ExpenseListItem(
             statusColor = Color.Gray
             amountText = formatter.format(totalLent)
         } else {
-            statusText = "you lent"
+            statusText = "you are owed"
             statusColor = PrimaryGreen
             amountText = formatter.format(amountUnpaid)
         }
@@ -71,7 +71,7 @@ fun ExpenseListItem(
             statusColor = Color.Gray
             amountText = formatter.format(myShare)
         } else {
-            statusText = "${expenseData.paidByProfile.displayName ?: "Someone"} lent you"
+            statusText = "you owe ${expenseData.paidByProfile.displayName ?: "Someone"}"
             statusColor = ErrorRed
             amountText = formatter.format(myShare)
         }
