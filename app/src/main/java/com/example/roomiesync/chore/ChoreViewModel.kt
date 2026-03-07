@@ -118,6 +118,14 @@ class ChoreViewModel(
         }
     }
 
+    fun rejectChore(assignmentId: String) {
+        viewModelScope.launch {
+            choreRepository.rejectChore(assignmentId)
+                .onSuccess { loadChores() }
+                .onFailure { e -> e.printStackTrace() }
+        }
+    }
+
     fun onSearchTextChanged(text: String) {
         _uiState.update { it.copy(searchText = text) }
         applyFilters()

@@ -35,6 +35,21 @@ class HomeViewModel(
         loadDashboardData()
     }
 
+    fun approveChore(assignmentId: String) {
+        viewModelScope.launch {
+            val userId = SupabaseClient.client.auth.currentUserOrNull()?.id ?: return@launch
+            choreRepository.approveChore(assignmentId, userId)
+            refresh()
+        }
+    }
+
+    fun rejectChore(assignmentId: String) {
+        viewModelScope.launch {
+            choreRepository.rejectChore(assignmentId)
+            refresh()
+        }
+    }
+
     private fun loadDashboardData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -98,7 +113,22 @@ class HomeViewModel(
                 }
 
                 val nowMillis = System.currentTimeMillis()
-                val activities = listOf(
+                
+                val pendingApprovalList = choreAssignments.filter {
+                    it.status == "PENDING_APPROVAL" && it.assignedToId != userId
+                }
+                
+                val pendingApprovalActivities = pendingApprovalList.map {
+                    ActivityFeedItem(
+                        id = it.id,
+                        title = "${it.chore?.title ?: "Chore"} needs approval",
+                        description = "Please review the completed chore",
+                        timestampMillis = it.completedAt?.toEpochMilliseconds() ?: nowMillis,
+                        iconType = ActivityIconType.CHORE_PENDING_APPROVAL
+                    )
+                }
+
+                val mockActivities = listOf(
                     ActivityFeedItem("a1", "Bob completed a chore", "Vacuum the living room", nowMillis - (1000 * 60 * 30), ActivityIconType.CHORE_COMPLETED),
                     ActivityFeedItem("a2", "Charlie added a new bill", "Hydro (\$45.00 each)", nowMillis - (1000 * 60 * 60 * 5), ActivityIconType.BILL_PAID),
                     ActivityFeedItem("a3", "Peter sent a message", "Won't be home tomorrow", nowMillis - (1000 * 60 * 60 * 24 * 2), ActivityIconType.CHAT),
@@ -110,7 +140,8 @@ class HomeViewModel(
                         profile = profile,
                         house = house,
                         chores = todoChores,
-                        recentActivity = activities,
+                        pendingApprovalChores = pendingApprovalList,
+                        recentActivity = pendingApprovalActivities + mockActivities,
                         errorMessage = null
                     )
                 }

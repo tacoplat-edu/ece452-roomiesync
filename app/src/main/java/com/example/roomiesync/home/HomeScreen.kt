@@ -3,6 +3,7 @@
 package com.example.roomiesync.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.roomiesync.chore.ChoreAssignment
+import com.example.roomiesync.chore.KudosDialog
 import com.example.roomiesync.ui.components.ChoreStatus
 import com.example.roomiesync.ui.theme.ErrorRed
 import com.example.roomiesync.ui.theme.PrimaryBackground
@@ -56,6 +61,8 @@ import com.example.roomiesync.utils.getRelativeTimeText
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlin.time.ExperimentalTime
 
+val ClickableActivityTypes = hashSetOf(ActivityIconType.CHORE_PENDING_APPROVAL)
+
 @Composable
 fun HomeScreen(
     user: UserInfo,
@@ -63,6 +70,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedVerificationChoreId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -73,6 +81,50 @@ fun HomeScreen(
             CircularProgressIndicator(color = PrimaryGreen)
         }
         return
+    }
+
+    selectedVerificationChoreId?.let { choreId ->
+        val assignment = if (choreId == "mock_id_1") {
+            ChoreAssignment(
+                id = "mock_id_1",
+                choreId = "mock_chore_1",
+                assignedToId = "mock_user",
+                status = "PENDING_APPROVAL",
+                proofPhotoUrl = null,
+                verifiedBy = null,
+                dueDate = kotlin.time.Clock.System.now(),
+                completedAt = kotlin.time.Clock.System.now(),
+                chore = com.example.roomiesync.chore.Chore(
+                    id = "mock_chore_1",
+                    houseId = "mock_house",
+                    title = "Vacuum Living Room",
+                    description = "Completed by John",
+                    recurrenceType = "none",
+                    createdAt = kotlin.time.Clock.System.now()
+                )
+            )
+        } else {
+            uiState.pendingApprovalChores.firstOrNull { it.id == choreId }
+        }
+        
+        if (assignment != null) {
+            val assigneeName = if (choreId == "mock_id_1") "John" else "the assignee"
+            KudosDialog(
+                choreAssignment = assignment,
+                assigneeName = assigneeName,
+                onDismiss = { selectedVerificationChoreId = null },
+                onApprove = { id -> 
+                    if (id != "mock_id_1") viewModel.approveChore(id)
+                    selectedVerificationChoreId = null 
+                },
+                onReject = { id -> 
+                    if (id != "mock_id_1") viewModel.rejectChore(id)
+                    selectedVerificationChoreId = null 
+                }
+            )
+        } else {
+            selectedVerificationChoreId = null
+        }
     }
 
     LazyColumn(
@@ -149,8 +201,28 @@ fun HomeScreen(
                     fontWeight = FontWeight.Bold,
                 )
 
+                // TODO: Remove this once kudos completion/rejections are implemented
+                // Mock Activity Feed Item for debugging
+                ActivityFeedCard(
+                    activity = ActivityFeedItem(
+                        id = "mock_id_1",
+                        title = "Vacuum Living Room",
+                        description = "Completed by John",
+                        timestampMillis = System.currentTimeMillis() - 3600000, // 1 hour ago
+                        iconType = ActivityIconType.CHORE_PENDING_APPROVAL
+                    ),
+                    onClick = {
+                        selectedVerificationChoreId = "mock_id_1"
+                    }
+                )
+
                 uiState.recentActivity.forEach { activity ->
-                    ActivityFeedCard(activity = activity)
+                    ActivityFeedCard(
+                        activity = activity,
+                        onClick = {
+                            selectedVerificationChoreId = activity.id
+                        }
+                    )
                 }
             }
         }
@@ -215,9 +287,11 @@ fun ChoreCard(assignment: ChoreAssignment) {
 }
 
 @Composable
-fun ActivityFeedCard(activity: ActivityFeedItem) {
+fun ActivityFeedCard(activity: ActivityFeedItem, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = ClickableActivityTypes.contains(activity.iconType)) { onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -232,6 +306,7 @@ fun ActivityFeedCard(activity: ActivityFeedItem) {
                 ActivityIconType.CHORE_ADDED -> Icons.Outlined.AddCircle to PrimaryGreen
                 ActivityIconType.BILL_PAID -> Icons.Default.AttachMoney to WarningYellow
                 ActivityIconType.CHAT -> Icons.Outlined.ChatBubbleOutline to Color.Gray
+                ActivityIconType.CHORE_PENDING_APPROVAL -> Icons.Default.Warning to Color(0xFF2196F3)
             }
             Icon(imageVector = icon, contentDescription = null, tint = color)
         }
