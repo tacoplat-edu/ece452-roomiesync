@@ -92,6 +92,7 @@ fun ChoreScreen(
     val queryParams by viewModel.queryParams.collectAsState()
     val focusManager = LocalFocusManager.current
     var selectedChore by remember { mutableStateOf<ChoreAssignment?>(null) }
+    var reviewChore by remember { mutableStateOf<ChoreAssignment?>(null) }
     val currentUserId = remember { SupabaseClient.client.auth.currentUserOrNull()?.id }
 
     LaunchedEffect(Unit) {
@@ -167,7 +168,7 @@ fun ChoreScreen(
                             if (visualStatus == ChoreStatus.PENDING_APPROVAL
                                 && choreAssignment.assignedToId != currentUserId
                             ) {
-                                viewModel.approveChore(choreAssignment.id)
+                                reviewChore = choreAssignment
                             } else if (visualStatus != ChoreStatus.PENDING_APPROVAL) {
                                 selectedChore = choreAssignment
                             }
@@ -245,6 +246,15 @@ fun ChoreScreen(
                 viewModel.submitChore(selectedChore!!.id, photoUri)
                 selectedChore = null
             }
+        )
+    }
+
+    if (reviewChore != null) {
+        KudosDialog(
+            choreAssignment = reviewChore!!,
+            onDismiss = { reviewChore = null },
+            onApprove = { id -> viewModel.approveChore(id) },
+            onReject = { id -> viewModel.rejectChore(id) }
         )
     }
 }

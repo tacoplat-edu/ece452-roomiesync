@@ -16,7 +16,8 @@ enum class ActivityIconType {
     CHORE_COMPLETED,
     CHORE_ADDED,
     BILL_PAID,
-    CHAT
+    CHAT,
+    CHORE_PENDING_APPROVAL
 }
 
 data class HomeState(
@@ -24,6 +25,7 @@ data class HomeState(
     val profile: Profile? = null,
     val house: House? = null,
     val chores: List<ChoreAssignment> = emptyList(),
+    val pendingApprovalChores: List<ChoreAssignment> = emptyList(),
     val recentActivity: List<ActivityFeedItem> = emptyList(),
     val errorMessage: String? = null
 )

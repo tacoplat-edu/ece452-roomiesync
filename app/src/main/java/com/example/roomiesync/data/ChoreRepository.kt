@@ -160,4 +160,19 @@ class ChoreRepository {
             Unit
         }
     }
+
+    suspend fun rejectChore(
+        assignmentId: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            client.postgrest.from("chore_assignments")
+                .update({
+                    set("status", "todo")
+                    set("proof_photo_url", null as String?)
+                }) {
+                    filter { eq("id", assignmentId) }
+                }
+            Unit
+        }
+    }
 }
