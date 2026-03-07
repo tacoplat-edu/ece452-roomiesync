@@ -195,34 +195,62 @@ fun HomeScreen(
             Column(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Text(
-                    text = "Recent Activity",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-
                 // TODO: Remove this once kudos completion/rejections are implemented
                 // Mock Activity Feed Item for debugging
-                ActivityFeedCard(
-                    activity = ActivityFeedItem(
-                        id = "mock_id_1",
-                        title = "Vacuum Living Room",
-                        description = "Completed by John",
-                        timestampMillis = System.currentTimeMillis() - 3600000, // 1 hour ago
-                        iconType = ActivityIconType.CHORE_PENDING_APPROVAL
-                    ),
-                    onClick = {
-                        selectedVerificationChoreId = "mock_id_1"
-                    }
+                val mockItem = ActivityFeedItem(
+                    id = "mock_id_1",
+                    title = "Vacuum Living Room",
+                    description = "Completed by John",
+                    timestampMillis = System.currentTimeMillis() - 3600000, // 1 hour ago
+                    iconType = ActivityIconType.CHORE_PENDING_APPROVAL
                 )
 
-                uiState.recentActivity.forEach { activity ->
-                    ActivityFeedCard(
-                        activity = activity,
-                        onClick = {
-                            selectedVerificationChoreId = activity.id
+                val allActivities = listOf(mockItem) + uiState.recentActivity
+                val pendingActivities = allActivities.filter { it.iconType == ActivityIconType.CHORE_PENDING_APPROVAL }
+                val recentActivities = allActivities.filter { it.iconType != ActivityIconType.CHORE_PENDING_APPROVAL }
+
+                if (pendingActivities.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Text(
+                            text = "Waiting For Validation",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+
+                        pendingActivities.forEach { activity ->
+                            ActivityFeedCard(
+                                activity = activity,
+                                onClick = {
+                                    selectedVerificationChoreId = activity.id
+                                }
+                            )
                         }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    Text(
+                        text = "Recent Activity",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                     )
+
+                    if (recentActivities.isEmpty()) {
+                        Text(
+                            text = "There is no recent activity to show.",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    } else {
+                        recentActivities.forEach { activity ->
+                            ActivityFeedCard(
+                                activity = activity,
+                                onClick = {
+                                    selectedVerificationChoreId = activity.id
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
