@@ -24,12 +24,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.roomiesync.billing.BillingScreen
 import com.example.roomiesync.billing.CreateExpenseScreen
+import com.example.roomiesync.calendar.CalendarScreen
 import com.example.roomiesync.chore.ChoreScreen
 import com.example.roomiesync.chore.CreateChoreFormScreen
 import com.example.roomiesync.components.BottomNavBar
@@ -53,10 +56,18 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val userHasHouse = true // TODO: This should be retrieved from the user's profile
+    val createChoreRoute = "create_chore?prefillDateMillis={prefillDateMillis}"
 
     // Routes where the bottom navigation bar and top bar should be hidden
     // We treat "profile" as a screen without the main bars (similar to Create Chore)
-    val routesWithoutBars = setOf("create_chore", "create_expense", "household_onboarding", "profile", "edit_profile")
+    val routesWithoutBars = setOf(
+        "create_chore",
+        createChoreRoute,
+        "create_expense",
+        "household_onboarding",
+        "profile",
+        "edit_profile"
+    )
 
     val showBars by remember(currentRoute) {
         derivedStateOf { currentRoute !in routesWithoutBars }
@@ -144,13 +155,29 @@ fun MainScreen(
                     onAddChoreClick = { navController.navigate("create_chore") }
                 )
             }
-            composable("create_chore") {
+            composable(
+                route = createChoreRoute,
+                arguments = listOf(
+                    navArgument("prefillDateMillis") {
+                        type = NavType.LongType
+                        defaultValue = -1L
+                    }
+                )
+            ) { backStackEntry ->
+                val prefillMillis = backStackEntry.arguments
+                    ?.getLong("prefillDateMillis")
+                    ?.takeIf { it >= 0L }
                 CreateChoreFormScreen(
+                    prefillDueDateMillis = prefillMillis,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
             composable(NavItem.Calendar.route) {
-                Text(text = "Calendar")
+                CalendarScreen(
+                    onCreateChoreForDay = { prefillMillis ->
+                        navController.navigate("create_chore?prefillDateMillis=$prefillMillis")
+                    }
+                )
             }
             composable(NavItem.Bills.route) {
                 BillingScreen(
