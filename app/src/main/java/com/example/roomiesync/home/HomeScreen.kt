@@ -235,7 +235,7 @@ fun ChoreCard(assignment: com.example.roomiesync.chore.ChoreAssignment) {
         ChoreStatus.OVERDUE -> Triple(ErrorRed.copy(alpha = 0.1f), ErrorRed, "OVERDUE")
         ChoreStatus.URGENT -> Triple(WarningYellow.copy(alpha = 0.1f), WarningYellow, "DUE SOON")
         ChoreStatus.PENDING_APPROVAL -> Triple(Color(0xFF2196F3).copy(alpha = 0.1f), Color(0xFF2196F3), "PENDING")
-        ChoreStatus.NOT_URGENT -> Triple(PrimaryGreen.copy(alpha = 0.1f), PrimaryGreen, "TO DO")
+        ChoreStatus.NOT_URGENT -> Triple(Color.Gray.copy(alpha = 0.1f), Color.Gray, "TO DO")
     }
 
     Card(
@@ -253,7 +253,7 @@ fun ChoreCard(assignment: com.example.roomiesync.chore.ChoreAssignment) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (status == ChoreStatus.NOT_URGENT) Icons.Default.CheckCircle else Icons.Default.Warning,
+                    imageVector = if (status == ChoreStatus.NOT_URGENT) Icons.Outlined.AddCircle else Icons.Default.Warning,
                     contentDescription = null,
                     tint = textColor,
                     modifier = Modifier.size(16.dp)

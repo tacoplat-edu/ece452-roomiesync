@@ -117,11 +117,11 @@ class HomeViewModel(
                     )
                 }
 
-                // Chores assigned to the current user that still need doing, including ones
-                // awaiting approval so the user can track their submitted chores
-                val todoChores = choreAssignments.filter {
-                    it.assignedToId == userId && it.status != "COMPLETED"
-                }
+                // Chores assigned to the current user, sorted by urgency with pending approval last
+                val statusPriority = mapOf("OVERDUE" to 0, "URGENT" to 1, "NOT_URGENT" to 2, "PENDING_APPROVAL" to 3)
+                val todoChores = choreAssignments
+                    .filter { it.assignedToId == userId && it.status != "COMPLETED" }
+                    .sortedWith(compareBy({ statusPriority[it.status] ?: 2 }, { it.dueDate }))
 
                 // Chores completed by someone else that need the current user's approval
                 val pendingApprovalList = choreAssignments.filter {
