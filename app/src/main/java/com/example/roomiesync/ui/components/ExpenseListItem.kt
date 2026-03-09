@@ -31,7 +31,6 @@ import com.example.roomiesync.ui.theme.ErrorRed
 import com.example.roomiesync.ui.theme.PrimaryGreen
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -45,7 +44,7 @@ fun ExpenseListItem(
     val iPaid = expense.paidById == currentUserId
 
     val mySplit = expenseData.splits.firstOrNull { it.profile.id == currentUserId }
-    val myShare = mySplit?.split?.amountOowed ?: 0.0
+    val myShare = mySplit?.split?.amountOwed ?: 0.0
     val settled = mySplit?.split?.isPaid == true
 
     val statusText: String
@@ -54,7 +53,7 @@ fun ExpenseListItem(
 
     if (iPaid) {
         val totalLent = expense.amount - myShare
-        val amountUnpaid = expenseData.splits.filter { !it.split.isPaid }.sumOf { it.split.amountOowed }
+        val amountUnpaid = expenseData.splits.filter { !it.split.isPaid }.sumOf { it.split.amountOwed }
 
         if (amountUnpaid == 0.0) {
             statusText = "settled"
@@ -101,8 +100,12 @@ fun ExpenseListItem(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = expense.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                val dateStr = SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(expense.createdAt))
+                Text(text = expense.description ?: "Expense", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                val dateStr = try {
+                    val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                    val displayFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+                    expense.createdAt?.let { displayFormat.format(isoFormat.parse(it)!!) } ?: ""
+                } catch (_: Exception) { "" }
                 Text(text = "${expenseData.paidByProfile.displayName} paid ${formatter.format(expense.amount)} • $dateStr", color = Color.Gray, fontSize = 12.sp)
             }
             Column(horizontalAlignment = Alignment.End) {

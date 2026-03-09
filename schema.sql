@@ -161,6 +161,15 @@ create policy "Profiles: view housemates" on public.profiles for select
   ));
 
 create policy "Expenses: view if member" on public.expenses for select using (public.is_member_of_house(house_id));
+create policy "Expenses: insert if member" on public.expenses for insert with check (public.is_member_of_house(house_id));
+create policy "Expenses: delete own" on public.expenses for delete using (auth.uid() = paid_by_id);
+
+create policy "Expense splits: view if member" on public.expense_splits for select
+  using (exists (select 1 from public.expenses e where e.id = expense_splits.expense_id and public.is_member_of_house(e.house_id)));
+create policy "Expense splits: insert if member" on public.expense_splits for insert
+  with check (exists (select 1 from public.expenses e where e.id = expense_id and public.is_member_of_house(e.house_id)));
+create policy "Expense splits: update if member" on public.expense_splits for update
+  using (exists (select 1 from public.expenses e where e.id = expense_splits.expense_id and public.is_member_of_house(e.house_id)));
 
 -- 7. THE JOIN FUNCTION (RPC)
 create function public.join_house_by_code(p_join_code text)

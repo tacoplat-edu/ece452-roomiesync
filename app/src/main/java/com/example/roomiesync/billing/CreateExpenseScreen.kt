@@ -175,9 +175,9 @@ fun CreateExpenseScreen(
                     Spacer(modifier = Modifier.weight(1f))
 
                     FullWidthButtonWithIcon(
-                        text = "Save expense",
+                        text = if (uiState.isSaving) "Saving…" else "Save expense",
                         icon = Icons.Default.Check,
-                        enabled = uiState.title.isNotBlank() && uiState.amount.isNotBlank() && uiState.splitBetween.isNotEmpty(),
+                        enabled = !uiState.isSaving && uiState.title.isNotBlank() && uiState.amount.isNotBlank() && uiState.splitBetween.isNotEmpty(),
                         onClick = { viewModel.saveExpense(onSuccess = onNavigateBack) }
                     )
 
