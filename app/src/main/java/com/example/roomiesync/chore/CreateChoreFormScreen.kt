@@ -44,6 +44,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +72,7 @@ import java.util.Locale
 fun CreateChoreFormScreen(
     modifier: Modifier = Modifier,
     viewModel: CreateChoreViewModel = viewModel(),
+    prefillDueDateMillis: Long? = null,
     onNavigateBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -80,6 +82,12 @@ fun CreateChoreFormScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var tempSelectedDateMillis by remember { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(prefillDueDateMillis, uiState.dueDate) {
+        if (prefillDueDateMillis != null && uiState.dueDate == null) {
+            viewModel.updateDueDate(prefillDueDateMillis)
+        }
+    }
 
     Scaffold(
         topBar = {
