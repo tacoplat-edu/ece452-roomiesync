@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.roomiesync.chore.ChoreAssignment
 import com.example.roomiesync.chore.KudosDialog
 import com.example.roomiesync.ui.components.ChoreStatus
 import com.example.roomiesync.ui.theme.ErrorRed
@@ -84,42 +83,20 @@ fun HomeScreen(
     }
 
     selectedVerificationChoreId?.let { choreId ->
-        val assignment = if (choreId == "mock_id_1") {
-            ChoreAssignment(
-                id = "mock_id_1",
-                choreId = "mock_chore_1",
-                assignedToId = "mock_user",
-                status = "PENDING_APPROVAL",
-                proofPhotoUrl = null,
-                verifiedBy = null,
-                dueDate = kotlin.time.Clock.System.now(),
-                completedAt = kotlin.time.Clock.System.now(),
-                chore = com.example.roomiesync.chore.Chore(
-                    id = "mock_chore_1",
-                    houseId = "mock_house",
-                    title = "Vacuum Living Room",
-                    description = "Completed by John",
-                    recurrenceType = "none",
-                    createdAt = kotlin.time.Clock.System.now()
-                )
-            )
-        } else {
-            uiState.pendingApprovalChores.firstOrNull { it.id == choreId }
-        }
-        
+        val assignment = uiState.pendingApprovalChores.firstOrNull { it.id == choreId }
+
         if (assignment != null) {
-            val assigneeName = if (choreId == "mock_id_1") "John" else "the assignee"
             KudosDialog(
                 choreAssignment = assignment,
-                assigneeName = assigneeName,
+                assigneeName = "the assignee",
                 onDismiss = { selectedVerificationChoreId = null },
-                onApprove = { id -> 
-                    if (id != "mock_id_1") viewModel.approveChore(id)
-                    selectedVerificationChoreId = null 
+                onApprove = { id ->
+                    viewModel.approveChore(id)
+                    selectedVerificationChoreId = null
                 },
-                onReject = { id -> 
-                    if (id != "mock_id_1") viewModel.rejectChore(id)
-                    selectedVerificationChoreId = null 
+                onReject = { id ->
+                    viewModel.rejectChore(id)
+                    selectedVerificationChoreId = null
                 }
             )
         } else {
@@ -195,19 +172,16 @@ fun HomeScreen(
             Column(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // TODO: Remove this once kudos completion/rejections are implemented
-                // Mock Activity Feed Item for debugging
-                val mockItem = ActivityFeedItem(
-                    id = "mock_id_1",
-                    title = "Vacuum Living Room",
-                    description = "Completed by John",
-                    timestampMillis = System.currentTimeMillis() - 3600000, // 1 hour ago
-                    iconType = ActivityIconType.CHORE_PENDING_APPROVAL
-                )
-
-                val allActivities = listOf(mockItem) + uiState.recentActivity
-                val pendingActivities = allActivities.filter { it.iconType == ActivityIconType.CHORE_PENDING_APPROVAL }
-                val recentActivities = allActivities.filter { it.iconType != ActivityIconType.CHORE_PENDING_APPROVAL }
+                val pendingActivities = uiState.pendingApprovalChores.map { assignment ->
+                    ActivityFeedItem(
+                        id = assignment.id,
+                        title = "${assignment.chore?.title ?: "Chore"} needs approval",
+                        description = "Please review the completed chore",
+                        timestampMillis = assignment.completedAt?.toEpochMilliseconds()
+                            ?: System.currentTimeMillis(),
+                        iconType = ActivityIconType.CHORE_PENDING_APPROVAL
+                    )
+                }
 
                 if (pendingActivities.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -220,9 +194,7 @@ fun HomeScreen(
                         pendingActivities.forEach { activity ->
                             ActivityFeedCard(
                                 activity = activity,
-                                onClick = {
-                                    selectedVerificationChoreId = activity.id
-                                }
+                                onClick = { selectedVerificationChoreId = activity.id }
                             )
                         }
                     }
@@ -235,19 +207,17 @@ fun HomeScreen(
                         fontWeight = FontWeight.Bold,
                     )
 
-                    if (recentActivities.isEmpty()) {
+                    if (uiState.recentActivity.isEmpty()) {
                         Text(
                             text = "There is no recent activity to show.",
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
                     } else {
-                        recentActivities.forEach { activity ->
+                        uiState.recentActivity.forEach { activity ->
                             ActivityFeedCard(
                                 activity = activity,
-                                onClick = {
-                                    selectedVerificationChoreId = activity.id
-                                }
+                                onClick = {} // completed chores are not clickable
                             )
                         }
                     }
@@ -258,7 +228,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun ChoreCard(assignment: ChoreAssignment) {
+fun ChoreCard(assignment: com.example.roomiesync.chore.ChoreAssignment) {
     val status = try { ChoreStatus.valueOf(assignment.status) } catch (e: Exception) { ChoreStatus.NOT_URGENT }
 
     val (cardColor, textColor, label) = when (status) {
