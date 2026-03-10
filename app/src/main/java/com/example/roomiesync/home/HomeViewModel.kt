@@ -69,7 +69,17 @@ class HomeViewModel(
                     return@launch
                 }
 
+                // Fetch all assignments for the house, including assignee profiles
                 val assignmentRows = choreRepository.getChoreAssignments(house.id)
+
+                // Fetch display names for all unique assignees so we can show real names in the feed
+                val assigneeIds = assignmentRows.map { it.assignedToId }.distinct()
+                val profilesByUserId = assigneeIds
+                    .mapNotNull { id -> profileRepository.getProfile(id)?.let { id to it } }
+                    .toMap()
+
+                val now = kotlin.time.Clock.System.now()
+                val nowMillis = System.currentTimeMillis()
 
                 val choreAssignments = assignmentRows.mapNotNull { row ->
                     val choreData = row.chores ?: return@mapNotNull null
@@ -77,7 +87,6 @@ class HomeViewModel(
                         Instant.parse(row.dueDate ?: return@mapNotNull null)
                     } catch (_: Exception) { return@mapNotNull null }
 
-                    val now = kotlin.time.Clock.System.now()
                     val uiStatus = when (row.status) {
                         "completed" -> "COMPLETED"
                         "pending_approval" -> "PENDING_APPROVAL"
@@ -108,31 +117,36 @@ class HomeViewModel(
                     )
                 }
 
-                val todoChores = choreAssignments.filter {
-                    it.assignedToId == userId && it.status != "COMPLETED" && it.status != "PENDING_APPROVAL"
-                }
+                // Chores assigned to the current user, sorted by urgency with pending approval last
+                val statusPriority = mapOf("OVERDUE" to 0, "URGENT" to 1, "NOT_URGENT" to 2, "PENDING_APPROVAL" to 3)
+                val todoChores = choreAssignments
+                    .filter { it.assignedToId == userId && it.status != "COMPLETED" }
+                    .sortedWith(compareBy({ statusPriority[it.status] ?: 2 }, { it.dueDate }))
 
-                val nowMillis = System.currentTimeMillis()
-                
+                // Chores completed by someone else that need the current user's approval
                 val pendingApprovalList = choreAssignments.filter {
                     it.status == "PENDING_APPROVAL" && it.assignedToId != userId
                 }
-                
-                val pendingApprovalActivities = pendingApprovalList.map {
-                    ActivityFeedItem(
-                        id = it.id,
-                        title = "${it.chore?.title ?: "Chore"} needs approval",
-                        description = "Please review the completed chore",
-                        timestampMillis = it.completedAt?.toEpochMilliseconds() ?: nowMillis,
-                        iconType = ActivityIconType.CHORE_PENDING_APPROVAL
-                    )
-                }
 
-                val mockActivities = listOf(
-                    ActivityFeedItem("a1", "Bob completed a chore", "Vacuum the living room", nowMillis - (1000 * 60 * 30), ActivityIconType.CHORE_COMPLETED),
-                    ActivityFeedItem("a2", "Charlie added a new bill", "Hydro (\$45.00 each)", nowMillis - (1000 * 60 * 60 * 5), ActivityIconType.BILL_PAID),
-                    ActivityFeedItem("a3", "Peter sent a message", "Won't be home tomorrow", nowMillis - (1000 * 60 * 60 * 24 * 2), ActivityIconType.CHAT),
-                )
+                // Recent activity: all completed chores across the house, sorted newest first,
+                // capped at 20 items. Includes the current user's own approvals so they see
+                // when their submitted chores get approved and appear here.
+                val recentActivity = choreAssignments
+                    .filter { it.status == "COMPLETED" }
+                    .sortedByDescending { it.completedAt ?: it.dueDate }
+                    .take(20)
+                    .map { assignment ->
+                        val isCurrentUser = assignment.assignedToId == userId
+                        val assigneeName = if (isCurrentUser) "You" else
+                            profilesByUserId[assignment.assignedToId]?.displayName ?: "A housemate"
+                        ActivityFeedItem(
+                            id = assignment.id,
+                            title = assignment.chore?.title ?: "Chore completed",
+                            description = "$assigneeName completed this chore",
+                            timestampMillis = assignment.completedAt?.toEpochMilliseconds() ?: nowMillis,
+                            iconType = ActivityIconType.CHORE_COMPLETED
+                        )
+                    }
 
                 _uiState.update {
                     it.copy(
@@ -141,7 +155,7 @@ class HomeViewModel(
                         house = house,
                         chores = todoChores,
                         pendingApprovalChores = pendingApprovalList,
-                        recentActivity = pendingApprovalActivities + mockActivities,
+                        recentActivity = recentActivity,
                         errorMessage = null
                     )
                 }
