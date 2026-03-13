@@ -7,10 +7,10 @@ import kotlinx.serialization.Serializable
 data class Expense(
     val id: String,
     @SerialName("house_id") val houseId: String,
-    val title: String,
+    @SerialName("description") val title: String,
     val amount: Double,
     @SerialName("paid_by_id") val paidById: String,
-    @SerialName("created_at") val createdAt: Long
+    @SerialName("created_at") val createdAt: String
 )
 
 @Serializable
