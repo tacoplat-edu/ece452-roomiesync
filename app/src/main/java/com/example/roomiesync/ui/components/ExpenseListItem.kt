@@ -46,7 +46,11 @@ fun ExpenseListItem(
 
     val mySplit = expenseData.splits.firstOrNull { it.profile.id == currentUserId }
     val myShare = mySplit?.split?.amountOowed ?: 0.0
-    val settled = mySplit?.split?.isPaid == true
+    val mySplitIsPaid = mySplit?.split?.isPaid == true
+    // Only "settled" for payer when everyone else has paid; treat null/isPaid false as unpaid
+    val allOtherSplitsPaid = expenseData.splits
+        .filter { it.profile.id != expense.paidById }
+        .all { it.split.isPaid }
 
     val statusText: String
     val statusColor: Color
@@ -54,9 +58,11 @@ fun ExpenseListItem(
 
     if (iPaid) {
         val totalLent = expense.amount - myShare
-        val amountUnpaid = expenseData.splits.filter { !it.split.isPaid }.sumOf { it.split.amountOowed }
+        val amountUnpaid = expenseData.splits
+            .filter { it.profile.id != expense.paidById && !it.split.isPaid }
+            .sumOf { it.split.amountOowed }
 
-        if (amountUnpaid == 0.0) {
+        if (amountUnpaid == 0.0 && allOtherSplitsPaid) {
             statusText = "settled"
             statusColor = Color.Gray
             amountText = formatter.format(totalLent)
@@ -66,7 +72,11 @@ fun ExpenseListItem(
             amountText = formatter.format(amountUnpaid)
         }
     } else {
-        if (settled) {
+        if (mySplit == null) {
+            statusText = "Not involved"
+            statusColor = Color.Gray
+            amountText = "—"
+        } else if (mySplitIsPaid) {
             statusText = "settled"
             statusColor = Color.Gray
             amountText = formatter.format(myShare)
@@ -102,7 +112,12 @@ fun ExpenseListItem(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = expense.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                val dateStr = SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(expense.createdAt))
+                val dateStr = try {
+                    val instant = java.time.Instant.parse(expense.createdAt)
+                    SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(instant.toEpochMilli()))
+                } catch (_: Exception) {
+                    expense.createdAt.take(10)
+                }
                 Text(text = "${expenseData.paidByProfile.displayName} paid ${formatter.format(expense.amount)} • $dateStr", color = Color.Gray, fontSize = 12.sp)
             }
             Column(horizontalAlignment = Alignment.End) {

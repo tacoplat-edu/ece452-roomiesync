@@ -161,6 +161,17 @@ create policy "Profiles: view housemates" on public.profiles for select
   ));
 
 create policy "Expenses: view if member" on public.expenses for select using (public.is_member_of_house(house_id));
+create policy "Expenses: insert if member" on public.expenses for insert with check (public.is_member_of_house(house_id));
+
+-- expense_splits: house members can view/insert; any house member can update (e.g. mark paid).
+-- To restrict "mark as paid" to only the debtor, replace the update policy with:
+--   using (user_id = auth.uid()) so only the user who owes can mark their own split.
+create policy "Expense splits: view if member" on public.expense_splits for select
+  using (exists (select 1 from public.expenses e where e.id = expense_splits.expense_id and public.is_member_of_house(e.house_id)));
+create policy "Expense splits: insert if member" on public.expense_splits for insert
+  with check (exists (select 1 from public.expenses e where e.id = expense_id and public.is_member_of_house(e.house_id)));
+create policy "Expense splits: update if member" on public.expense_splits for update
+  using (exists (select 1 from public.expenses e where e.id = expense_splits.expense_id and public.is_member_of_house(e.house_id)));
 
 -- 7. THE JOIN FUNCTION (RPC)
 create function public.join_house_by_code(p_join_code text)

@@ -19,6 +19,22 @@ class ProfileRepository {
         }
     }
 
+    suspend fun getProfiles(userIds: List<String>): List<Profile> {
+        if (userIds.isEmpty()) return emptyList()
+        return try {
+            SupabaseClient.client.from("profiles")
+                .select {
+                    filter {
+                        isIn("id", userIds)
+                    }
+                }
+                .decodeList<Profile>()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
     suspend fun updateProfile(profile: Profile): Boolean {
         return try {
             SupabaseClient.client.from("profiles")
