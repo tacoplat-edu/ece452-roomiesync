@@ -51,11 +51,8 @@ class ProfileViewModel(
     fun updateAvatarUrl(url: String) {
         val currentProfile = _uiState.value.profile ?: return
         val updatedProfile = currentProfile.copy(avatarUrl = url)
-        
         viewModelScope.launch {
-            // Optimistically update UI
             _uiState.update { it.copy(profile = updatedProfile) }
-            // Save to database
             profileRepository.updateProfile(updatedProfile)
         }
     }
@@ -64,5 +61,6 @@ class ProfileViewModel(
 data class ProfileUiState(
     val profile: Profile? = null,
     val house: House? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val avatarUploadError: String? = null
 )

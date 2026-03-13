@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,9 +61,14 @@ import com.example.roomiesync.utils.household_onboarding.validation.JoinCodeForm
 @Composable
 fun HouseholdOnboardingScreen(
     modifier: Modifier = Modifier,
+    onNavigateToApp: () -> Unit = {},
     householdOnboardingViewModel: HouseholdOnboardingViewModel = viewModel()
 ) {
     val uiState by householdOnboardingViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        householdOnboardingViewModel.navigateToApp.collect { onNavigateToApp() }
+    }
 
     BackHandler(enabled = uiState.currentStep != HouseholdOnboardingStep.HOME) {
         householdOnboardingViewModel.onGoHome()

@@ -58,8 +58,7 @@ fun ProfileScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
             if (uri != null) {
-                // In a real app we'd upload the image somewhere and get an actual URL.
-                // For now, we store the local URI as string since Supabase storage might not be set up fully here.
+                // Simple behavior: store local URI string in avatar_url
                 viewModel.updateAvatarUrl(uri.toString())
             }
         }
@@ -135,9 +134,8 @@ fun ProfileScreen(
                 iconTint = Color.White
             )
         }
-        
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Name
         Text(
             text = uiState.profile?.displayName ?: "User",
@@ -155,16 +153,8 @@ fun ProfileScreen(
         
         Spacer(modifier = Modifier.height(64.dp))
         
-        // Household Info
-//        val house = uiState.house
-
-        val house = House(
-            id = "house-1",
-            name = "My House",
-            address = "123 Main St",
-            joinCode = "ABC123",
-            createdBy = "user-1"
-        )
+        // Household Info (from DB via ProfileViewModel)
+        val house = uiState.house
 
         if (house != null) {
             HouseholdInfoCard(

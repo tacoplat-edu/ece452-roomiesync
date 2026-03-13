@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.roomiesync.data.HouseRepository
 import com.example.roomiesync.data.InvalidJoinCodeException
 import com.example.roomiesync.auth.AuthRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -18,6 +21,10 @@ class HouseholdOnboardingViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HouseholdOnboardingState())
     val uiState: StateFlow<HouseholdOnboardingState> = _uiState.asStateFlow()
+
+    /** One-shot: emit when user successfully joins a house so the host can navigate to main app. */
+    private val _navigateToApp = MutableSharedFlow<Unit>(replay = 0)
+    val navigateToApp: SharedFlow<Unit> = _navigateToApp.asSharedFlow()
 
     fun onGoToCreate() {
         _uiState.update {
@@ -94,6 +101,7 @@ class HouseholdOnboardingViewModel(
                             currentStep = HouseholdOnboardingStep.HOME
                         )
                     }
+                    _navigateToApp.tryEmit(Unit)
                 }
                 .onFailure { e ->
                     _uiState.update {

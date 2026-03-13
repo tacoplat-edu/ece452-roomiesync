@@ -2,6 +2,7 @@ package com.example.roomiesync.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -19,6 +20,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -50,12 +55,14 @@ fun MainScreen(
     user: UserInfo,
     profile: Profile?,
     onSignOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    mainViewModel: MainViewModel = viewModel()
 ) {
+    val mainState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val userHasHouse = true // TODO: This should be retrieved from the user's profile
+    val userHasHouse = mainState.hasHouse
     val createChoreRoute = "create_chore?prefillDateMillis={prefillDateMillis}"
 
     // Routes where the bottom navigation bar and top bar should be hidden
@@ -84,6 +91,14 @@ fun MainScreen(
 
     val isTitleEmpty = title.isEmpty()
 
+    if (mainState.isLoading) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            androidx.compose.material3.CircularProgressIndicator()
+        }
+    } else {
     Scaffold(
         modifier = Modifier,
         topBar = {
@@ -106,10 +121,12 @@ fun MainScreen(
                                     launchSingleTop = true
                             }
                         }) {
-                            if (profile?.avatarUrl != null) {
-                                // Placeholder for image loading
-                                // TODO: connect to avatar urls
-                                Box(
+                            val avatarUrl = profile?.avatarUrl
+                            if (!avatarUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = "Profile avatar",
+                                    contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(CircleShape)
@@ -143,7 +160,12 @@ fun MainScreen(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("household_onboarding") {
-                HouseholdOnboardingScreen()
+                HouseholdOnboardingScreen(
+                    onNavigateToApp = {
+                        mainViewModel.refreshHouse()
+                        navController.navigate(NavItem.Home.route) { popUpTo(0) }
+                    }
+                )
             }
             composable(NavItem.Home.route) {
                 HomeScreen(
@@ -205,5 +227,6 @@ fun MainScreen(
                 )
             }
         }
+    }
     }
 }
