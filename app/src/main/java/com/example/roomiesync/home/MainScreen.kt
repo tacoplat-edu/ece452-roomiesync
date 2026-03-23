@@ -33,6 +33,7 @@ import androidx.navigation.navArgument
 import com.example.roomiesync.billing.BillingScreen
 import com.example.roomiesync.billing.CreateExpenseScreen
 import com.example.roomiesync.calendar.CalendarScreen
+import com.example.roomiesync.chat.ChatScreen
 import com.example.roomiesync.chore.ChoreScreen
 import com.example.roomiesync.chore.CreateChoreFormScreen
 import com.example.roomiesync.components.BottomNavBar
@@ -190,7 +191,7 @@ fun MainScreen(
                 )
             }
             composable(NavItem.Chat.route) {
-                Text(text = "Chat")
+                ChatScreen()
             }
             composable("profile") {
                 ProfileScreen(
