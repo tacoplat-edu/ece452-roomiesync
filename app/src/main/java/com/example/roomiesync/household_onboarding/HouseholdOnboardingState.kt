@@ -17,5 +17,6 @@ data class HouseholdOnboardingState(
     val isCreating: Boolean = false,
     val isJoining: Boolean = false,
     val createErrorMessage: String? = null,
-    val joinErrorMessage: String? = null
+    val joinErrorMessage: String? = null,
+    val isSuccess: Boolean = false
 )

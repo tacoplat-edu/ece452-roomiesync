@@ -2,11 +2,13 @@ package com.example.roomiesync.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -18,18 +20,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.roomiesync.billing.BillingScreen
 import com.example.roomiesync.billing.CreateExpenseScreen
 import com.example.roomiesync.calendar.CalendarScreen
@@ -51,13 +60,24 @@ fun MainScreen(
     user: UserInfo,
     profile: Profile?,
     onSignOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    mainViewModel: MainViewModel = viewModel()
 ) {
+    val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val userHasHouse = true // TODO: This should be retrieved from the user's profile
+
+    if (uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val userHasHouse = uiState.userHasHouse
     val createChoreRoute = "create_chore?prefillDateMillis={prefillDateMillis}"
+    val householdOnboardingRoute = "household_onboarding?startWithJoin={startWithJoin}"
 
     // Routes where the bottom navigation bar and top bar should be hidden
     // We treat "profile" as a screen without the main bars (similar to Create Chore)
@@ -66,6 +86,7 @@ fun MainScreen(
         createChoreRoute,
         "create_expense",
         "household_onboarding",
+        householdOnboardingRoute,
         "profile",
         "edit_profile"
     )
@@ -86,7 +107,7 @@ fun MainScreen(
     val isTitleEmpty = title.isEmpty()
 
     Scaffold(
-        modifier = Modifier,
+        modifier = modifier,
         topBar = {
             if (showBars) {
                 TopAppBar(
@@ -107,21 +128,26 @@ fun MainScreen(
                                     launchSingleTop = true
                             }
                         }) {
-                            if (profile?.avatarUrl != null) {
-                                // Placeholder for image loading
-                                // TODO: connect to avatar urls
-                                Box(
+                            val avatarUrl = profile?.avatarUrl
+                            if (!avatarUrl.isNullOrEmpty()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(avatarUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Profile Avatar",
                                     modifier = Modifier
-                                        .size(48.dp)
+                                        .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(Color.Gray)
+                                        .background(Color.Gray),
+                                    contentScale = ContentScale.Crop
                                 )
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.AccountCircle,
                                     contentDescription = "Profile",
                                     tint = Color.Gray,
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(36.dp)
                                 )
                             }
                         }
@@ -140,11 +166,29 @@ fun MainScreen(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = if (userHasHouse) NavItem.Home.route else "household_onboarding",
+            startDestination = if (userHasHouse) NavItem.Home.route else householdOnboardingRoute,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("household_onboarding") {
-                HouseholdOnboardingScreen()
+            composable(
+                route = householdOnboardingRoute,
+                arguments = listOf(
+                    navArgument("startWithJoin") {
+                        type = NavType.BoolType
+                        defaultValue = false
+                    }
+                )
+            ) { backStackEntry ->
+                val startWithJoin = backStackEntry.arguments?.getBoolean("startWithJoin") ?: false
+                HouseholdOnboardingScreen(
+                    startWithJoin = startWithJoin,
+                    onNavigateBack = { navController.popBackStack() },
+                    onOnboardingComplete = { 
+                        mainViewModel.checkUserHouse()
+                        navController.navigate(NavItem.Home.route) {
+                            popUpTo(householdOnboardingRoute) { inclusive = true }
+                        }
+                    }
+                )
             }
             composable(NavItem.Home.route) {
                 HomeScreen(
@@ -196,8 +240,9 @@ fun MainScreen(
             composable("profile") {
                 ProfileScreen(
                     onEditProfileClick = { navController.navigate("edit_profile") },
-                    onHouseholdClick = { /* TODO */ },
-                    onCloseClick = { navController.popBackStack() }
+                    onHouseholdClick = { navController.navigate("household_onboarding?startWithJoin=true") },
+                    onCloseClick = { navController.popBackStack() },
+                    onSignOut = onSignOut
                 )
             }
             composable("edit_profile") {

@@ -2,6 +2,7 @@ package com.example.roomiesync.billing
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.roomiesync.BuildConfig
 import com.example.roomiesync.auth.AuthRepository
 import com.example.roomiesync.data.ChoreRepository
 import com.example.roomiesync.data.ExpenseRepository
@@ -61,7 +62,9 @@ class CreateExpenseViewModel(
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                }
                 _uiState.update {
                     it.copy(isLoading = false, errorMessage = e.message)
                 }

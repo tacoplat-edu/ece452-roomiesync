@@ -1,20 +1,27 @@
 package com.example.roomiesync.data
 
+import android.util.Log
+import com.example.roomiesync.BuildConfig
 import io.github.jan.supabase.postgrest.from
 
 class ProfileRepository {
 
     suspend fun getProfile(userId: String): Profile? {
         return try {
-            SupabaseClient.client.from("profiles")
+            val response = SupabaseClient.client.from("profiles")
                 .select {
                     filter {
                         eq("id", userId)
                     }
                 }
-                .decodeSingleOrNull<Profile>()
+            if (BuildConfig.DEBUG) {
+                Log.d("ProfileRepository", "Raw getProfile JSON: ${response.data}")
+            }
+            response.decodeSingleOrNull<Profile>()
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                Log.e("ProfileRepository", "Error decoding profile", e)
+            }
             null
         }
     }
@@ -30,7 +37,9 @@ class ProfileRepository {
                 }
                 .decodeList<Profile>()
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
             emptyList()
         }
     }
@@ -50,7 +59,9 @@ class ProfileRepository {
                 }
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
             false
         }
     }

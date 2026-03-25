@@ -4,6 +4,7 @@ package com.example.roomiesync.chore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.roomiesync.BuildConfig
 import com.example.roomiesync.data.ChoreRepository
 import com.example.roomiesync.data.SupabaseClient
 import com.example.roomiesync.ui.components.ChoreStatus
@@ -95,7 +96,9 @@ class ChoreViewModel(
                 applyFilters()
                 _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                }
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
@@ -105,7 +108,11 @@ class ChoreViewModel(
         viewModelScope.launch {
             choreRepository.submitChoreForReview(choreId, photoUrl)
                 .onSuccess { loadChores() }
-                .onFailure { e -> e.printStackTrace() }
+                .onFailure { e -> 
+                    if (BuildConfig.DEBUG) {
+                        e.printStackTrace()
+                    }
+                }
         }
     }
 
@@ -114,7 +121,11 @@ class ChoreViewModel(
             val userId = currentUserId ?: return@launch
             choreRepository.approveChore(assignmentId, userId)
                 .onSuccess { loadChores() }
-                .onFailure { e -> e.printStackTrace() }
+                .onFailure { e -> 
+                    if (BuildConfig.DEBUG) {
+                        e.printStackTrace()
+                    }
+                }
         }
     }
 
@@ -122,7 +133,11 @@ class ChoreViewModel(
         viewModelScope.launch {
             choreRepository.rejectChore(assignmentId)
                 .onSuccess { loadChores() }
-                .onFailure { e -> e.printStackTrace() }
+                .onFailure { e -> 
+                    if (BuildConfig.DEBUG) {
+                        e.printStackTrace()
+                    }
+                }
         }
     }
 

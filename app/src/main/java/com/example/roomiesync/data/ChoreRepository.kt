@@ -1,5 +1,6 @@
 package com.example.roomiesync.data
 
+import com.example.roomiesync.BuildConfig
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
@@ -71,7 +72,9 @@ class ChoreRepository {
                 .decodeSingleOrNull<HouseMemberWithHouse>()
             membership?.houses
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
             null
         }
     }
@@ -85,7 +88,9 @@ class ChoreRepository {
                 .decodeList<HouseMemberRow>()
             rows.mapNotNull { it.profiles }
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
             emptyList()
         }
     }
@@ -98,7 +103,9 @@ class ChoreRepository {
                 }
                 .decodeList<ChoreAssignmentRow>()
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
             emptyList()
         }
     }

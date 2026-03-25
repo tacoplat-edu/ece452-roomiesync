@@ -2,6 +2,7 @@ package com.example.roomiesync.billing
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.roomiesync.BuildConfig
 import com.example.roomiesync.auth.AuthRepository
 import com.example.roomiesync.data.ExpenseSplitDetail
 import com.example.roomiesync.data.ExpenseWithDetails
@@ -52,7 +53,9 @@ class BillingViewModel(
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                }
                 _uiState.update {
                     it.copy(isLoading = false, currentUserId = userId, expenses = emptyList(), overallBalance = 0.0)
                 }

@@ -1,5 +1,6 @@
 package com.example.roomiesync.data
 
+import com.example.roomiesync.BuildConfig
 import com.example.roomiesync.auth.AuthRepository
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -59,7 +60,9 @@ class HouseRepository(
                 .decodeSingleOrNull<HouseMemberWithHouse>()
             response?.houses
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
             null
         }
     }
