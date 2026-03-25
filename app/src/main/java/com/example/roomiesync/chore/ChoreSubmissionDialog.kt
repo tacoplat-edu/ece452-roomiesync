@@ -243,7 +243,9 @@ fun ChoreSubmissionDialog(
                                                 }
                                                 onSubmit(publicUrl)
                                             } catch (e: Exception) {
-                                                e.printStackTrace()
+                                                if (BuildConfig.DEBUG) {
+                                                    e.printStackTrace()
+                                                }
                                                 errorMessage = e.message ?: "Upload failed"
                                                 isLoading = false
                                             }

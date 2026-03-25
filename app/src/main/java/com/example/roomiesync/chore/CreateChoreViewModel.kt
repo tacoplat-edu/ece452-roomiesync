@@ -2,6 +2,7 @@ package com.example.roomiesync.chore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.roomiesync.BuildConfig
 import com.example.roomiesync.data.ChoreRepository
 import com.example.roomiesync.data.Profile
 import com.example.roomiesync.data.SupabaseClient
@@ -66,7 +67,9 @@ class CreateChoreViewModel(
                     _uiState.update { it.copy(isLoading = false, errorMessage = "No household found") }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                }
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
         }
@@ -155,7 +158,9 @@ class CreateChoreViewModel(
                 _uiState.update { it.copy(isLoading = false) }
                 onSuccess()
             }.onFailure { e ->
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                }
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to save chore") }
             }
         }

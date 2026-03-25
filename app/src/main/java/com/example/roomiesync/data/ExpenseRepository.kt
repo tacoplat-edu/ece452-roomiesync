@@ -1,5 +1,6 @@
 package com.example.roomiesync.data
 
+import com.example.roomiesync.BuildConfig
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +83,9 @@ class ExpenseRepository(
                 }
                 .decodeList<ExpenseRow>()
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
             emptyList()
         }
     }
@@ -96,7 +99,9 @@ class ExpenseRepository(
                 }
                 .decodeList<ExpenseSplitRow>()
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
             emptyList()
         }
     }

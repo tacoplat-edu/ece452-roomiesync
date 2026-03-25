@@ -4,6 +4,7 @@ package com.example.roomiesync.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.roomiesync.BuildConfig
 import com.example.roomiesync.chore.Chore
 import com.example.roomiesync.chore.ChoreAssignment
 import com.example.roomiesync.data.ChoreRepository
@@ -160,7 +161,9 @@ class HomeViewModel(
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                }
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to load data") }
             }
         }

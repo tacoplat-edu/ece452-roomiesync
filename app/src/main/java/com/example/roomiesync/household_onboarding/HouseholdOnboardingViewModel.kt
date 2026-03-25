@@ -91,7 +91,7 @@ class HouseholdOnboardingViewModel(
                         it.copy(
                             isJoining = false,
                             joinErrorMessage = null,
-                            currentStep = HouseholdOnboardingStep.HOME
+                            isSuccess = true
                         )
                     }
                 }
@@ -112,7 +112,7 @@ class HouseholdOnboardingViewModel(
     fun onDoneFromCreated() {
         _uiState.update {
             it.copy(
-                currentStep = HouseholdOnboardingStep.HOME,
+                isSuccess = true,
                 createdInviteCode = null,
                 householdNickname = "",
                 householdAddress = ""

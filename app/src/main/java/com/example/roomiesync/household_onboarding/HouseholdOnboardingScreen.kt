@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,12 +61,35 @@ import com.example.roomiesync.utils.household_onboarding.validation.JoinCodeForm
 @Composable
 fun HouseholdOnboardingScreen(
     modifier: Modifier = Modifier,
+    startWithJoin: Boolean = false,
+    onNavigateBack: () -> Unit = {},
+    onOnboardingComplete: () -> Unit = {},
     householdOnboardingViewModel: HouseholdOnboardingViewModel = viewModel()
 ) {
     val uiState by householdOnboardingViewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(startWithJoin) {
+        if (startWithJoin) {
+            householdOnboardingViewModel.onGoToJoin()
+        }
+    }
+
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            onOnboardingComplete()
+        }
+    }
+
+    val handleBack = {
+        if (startWithJoin && uiState.currentStep == HouseholdOnboardingStep.JOIN) {
+            onNavigateBack()
+        } else {
+            householdOnboardingViewModel.onGoHome()
+        }
+    }
+
     BackHandler(enabled = uiState.currentStep != HouseholdOnboardingStep.HOME) {
-        householdOnboardingViewModel.onGoHome()
+        handleBack()
     }
 
     Box(
@@ -89,7 +113,7 @@ fun HouseholdOnboardingScreen(
                     createErrorMessage = uiState.createErrorMessage,
                     onNicknameChange = householdOnboardingViewModel::updateHouseholdNickname,
                     onAddressChange = householdOnboardingViewModel::updateHouseholdAddress,
-                    onBack = householdOnboardingViewModel::onGoHome,
+                    onBack = { householdOnboardingViewModel.onGoHome() },
                     onCreate = householdOnboardingViewModel::onCreateHouse
                 )
                 HouseholdOnboardingStep.CREATED -> CreatedHouseholdContent(
@@ -101,7 +125,7 @@ fun HouseholdOnboardingScreen(
                     isJoining = uiState.isJoining,
                     joinErrorMessage = uiState.joinErrorMessage,
                     onCodeChange = householdOnboardingViewModel::updateJoinCode,
-                    onBack = householdOnboardingViewModel::onGoHome,
+                    onBack = handleBack,
                     onJoin = householdOnboardingViewModel::onJoinHouse
                 )
             }

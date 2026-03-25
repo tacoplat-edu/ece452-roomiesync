@@ -128,7 +128,15 @@ alter table public.expenses enable row level security;
 alter table public.expense_splits enable row level security;
 
 -- Profiles: view/update own; insert own (for signup trigger)
-create policy "Profiles: view own" on public.profiles for select using (auth.uid() = id);
+create policy "Profiles: view allowed" on public.profiles for select using (
+    auth.uid() = id OR
+    exists (
+        select 1 from public.house_members hm1
+        join public.house_members hm2 on hm1.house_id = hm2.house_id
+        where hm1.user_id = auth.uid() and hm2.user_id = profiles.id
+    )
+);
+-- create policy "Profiles: view own" on public.profiles for select using (auth.uid() = id);
 create policy "Profiles: insert own" on public.profiles for insert with check (auth.uid() = id);
 create policy "Profiles: update own" on public.profiles for update using (auth.uid() = id);
 
@@ -153,12 +161,12 @@ create policy "Chore assignments: update if member" on public.chore_assignments 
   using (exists (select 1 from public.chores c where c.id = chore_assignments.chore_id and public.is_member_of_house(c.house_id)));
 
 -- Also let house members view each other's profiles (needed for assignee lists)
-create policy "Profiles: view housemates" on public.profiles for select
-  using (exists (
-    select 1 from public.house_members hm1
-    join public.house_members hm2 on hm1.house_id = hm2.house_id
-    where hm1.user_id = auth.uid() and hm2.user_id = profiles.id
-  ));
+-- create policy "Profiles: view housemates" on public.profiles for select
+--  using (exists (
+--    select 1 from public.house_members hm1
+--    join public.house_members hm2 on hm1.house_id = hm2.house_id
+--    where hm1.user_id = auth.uid() and hm2.user_id = profiles.id
+--  ));
 
 create policy "Expenses: view if member" on public.expenses for select using (public.is_member_of_house(house_id));
 create policy "Expenses: insert if member" on public.expenses for insert with check (public.is_member_of_house(house_id));
