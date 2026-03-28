@@ -9,7 +9,14 @@ data class Message(
     @SerialName("house_id") val houseId: String,
     @SerialName("sender_id") val senderId: String,
     val content: String,
-    @SerialName("created_at") val createdAt: Long
+    @SerialName("created_at") val createdAt: String
+)
+
+@Serializable
+data class CreateMessagePayload(
+    @SerialName("house_id") val houseId: String,
+    @SerialName("sender_id") val senderId: String,
+    val content: String
 )
 
 data class MessageWithProfile(
