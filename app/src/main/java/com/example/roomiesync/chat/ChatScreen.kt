@@ -46,6 +46,7 @@ import com.example.roomiesync.ui.theme.PrimaryGreen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.time.ExperimentalTime
 
 @Composable
 fun ChatScreen(
@@ -140,10 +141,16 @@ fun ChatScreen(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun ChatBubble(messageData: MessageWithProfile, isSelf: Boolean) {
     val timeFormatter = SimpleDateFormat("h:mm a", Locale.getDefault())
-    val timeString = timeFormatter.format(Date(messageData.message.createdAt))
+    val timeString = try {
+        val instant = kotlin.time.Instant.parse(messageData.message.createdAt)
+        timeFormatter.format(Date(instant.toEpochMilliseconds()))
+    } catch (_: Exception) {
+        messageData.message.createdAt
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),

@@ -21,6 +21,8 @@ drop function if exists public.handle_new_user();
 drop function if exists public.set_house_join_code();
 drop function if exists public.generate_house_join_code();
 
+drop table if exists public.messages cascade;
+
 -- 2. CORE IDENTITY: Profiles, Houses, and Members
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -91,7 +93,16 @@ create table public.expense_splits (
   is_paid boolean default false
 );
 
--- 5. AUTOMATION FUNCTIONS & TRIGGERS
+-- 5. CHAT MESSAGES
+create table public.messages (
+  id uuid primary key default gen_random_uuid(),
+  house_id uuid not null references public.houses(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null,
+  created_at timestamptz default now()
+);
+
+-- 6. AUTOMATION FUNCTIONS & TRIGGERS
 -- Create profile on signup
 create function public.handle_new_user() returns trigger as $$
 begin
@@ -126,6 +137,7 @@ alter table public.chores enable row level security;
 alter table public.chore_assignments enable row level security;
 alter table public.expenses enable row level security;
 alter table public.expense_splits enable row level security;
+alter table public.messages enable row level security;
 
 -- Profiles: view/update own; insert own (for signup trigger)
 create policy "Profiles: view allowed" on public.profiles for select using (
@@ -181,7 +193,11 @@ create policy "Expense splits: insert if member" on public.expense_splits for in
 create policy "Expense splits: update if member" on public.expense_splits for update
   using (exists (select 1 from public.expenses e where e.id = expense_splits.expense_id and public.is_member_of_house(e.house_id)));
 
--- 7. THE JOIN FUNCTION (RPC)
+-- Messages: house members can view and send messages
+create policy "Messages: view if member" on public.messages for select using (public.is_member_of_house(house_id));
+create policy "Messages: insert if member" on public.messages for insert with check (public.is_member_of_house(house_id) and auth.uid() = sender_id);
+
+-- 8. THE JOIN FUNCTION (RPC)
 create function public.join_house_by_code(p_join_code text)
 returns jsonb language plpgsql security definer as $$
 declare v_house_id uuid;
