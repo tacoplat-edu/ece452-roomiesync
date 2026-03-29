@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,6 +39,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.roomiesync.data.MessageWithProfile
@@ -55,6 +60,8 @@ fun ChatScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
 
     // Scroll to newest message
     LaunchedEffect(uiState.messages.size) {
@@ -62,6 +69,14 @@ fun ChatScreen(
             listState.animateScrollToItem(uiState.messages.size - 1)
         }
     }
+
+    // Dismiss keyboard when user starts scrolling up
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            keyboardController?.hide()
+        }
+    }
+
 
     if (uiState.isLoading) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -74,7 +89,13 @@ fun ChatScreen(
         modifier = modifier
             .fillMaxSize()
             .background(color = PrimaryBackground)
-    ) {
+            .imePadding()
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    keyboardController?.hide()
+                }
+            }
+    ){
         LazyColumn(
             state = listState,
             modifier = Modifier
