@@ -68,18 +68,24 @@ class EditProfileViewModel(
         
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
-            val newProfile = currentProfile.copy(
-                displayName = currentState.displayName
-                // NOTE: Email updating requires a different set of Supabase Auth endpoints,
-                // so we just mock updating the DB for display name here, while storing the state.
-            )
-            val success = profileRepository.updateProfile(newProfile)
-            if (success) {
-                _uiState.update { it.copy(isSaving = false, profile = newProfile) }
-                onSuccess()
-            } else {
+
+            val newProfile = currentProfile.copy(displayName = currentState.displayName)
+            val profileSuccess = profileRepository.updateProfile(newProfile)
+            if (!profileSuccess) {
                 _uiState.update { it.copy(isSaving = false, errorMessage = "Failed to update profile") }
+                return@launch
             }
+
+            val currentEmail = authRepository.currentUser()?.email
+            if (currentState.email.isNotBlank() && currentState.email != currentEmail) {
+                authRepository.updateEmail(currentState.email).onFailure { e ->
+                    _uiState.update { it.copy(isSaving = false, errorMessage = "Failed to update email: ${e.message}") }
+                    return@launch
+                }
+            }
+
+            _uiState.update { it.copy(isSaving = false, profile = newProfile) }
+            onSuccess()
         }
     }
 }

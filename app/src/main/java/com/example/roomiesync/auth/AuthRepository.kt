@@ -58,6 +58,12 @@ class AuthRepository(
         auth.signOut()
     }
 
+    suspend fun updateEmail(newEmail: String): Result<Unit> = runCatching {
+        auth.updateUser {
+            email = newEmail
+        }
+    }
+
     fun currentUser(): UserInfo? = auth.currentUserOrNull()
 }
 

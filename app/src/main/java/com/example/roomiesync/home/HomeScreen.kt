@@ -88,7 +88,7 @@ fun HomeScreen(
         if (assignment != null) {
             KudosDialog(
                 choreAssignment = assignment,
-                assigneeName = "the assignee",
+                assigneeName = uiState.assigneeProfiles[assignment.assignedToId]?.displayName ?: "Your housemate",
                 onDismiss = { selectedVerificationChoreId = null },
                 onApprove = { id ->
                     viewModel.approveChore(id)

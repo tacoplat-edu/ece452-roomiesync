@@ -105,12 +105,12 @@ class BillingViewModel(
             if (iPaid) {
                 val othersOweMe = detail.splits
                     .filter { it.profile.id != userId && !it.split.isPaid }
-                    .sumOf { it.split.amountOowed }
+                    .sumOf { it.split.amountOwed }
                 balance += othersOweMe
             } else {
                 val iOwe = detail.splits
                     .firstOrNull { it.profile.id == userId && !it.split.isPaid }
-                    ?.split?.amountOowed ?: 0.0
+                    ?.split?.amountOwed ?: 0.0
                 balance -= iOwe
             }
         }

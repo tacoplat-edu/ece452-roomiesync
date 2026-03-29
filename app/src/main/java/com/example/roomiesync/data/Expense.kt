@@ -18,7 +18,7 @@ data class ExpenseSplit(
     val id: String,
     @SerialName("expense_id") val expenseId: String,
     @SerialName("user_id") val userId: String,
-    @SerialName("amount_owed") val amountOowed: Double,
+    @SerialName("amount_owed") val amountOwed: Double,
     @SerialName("is_paid") val isPaid: Boolean
 )
 

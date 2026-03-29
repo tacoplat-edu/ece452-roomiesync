@@ -156,6 +156,7 @@ class HomeViewModel(
                         house = house,
                         chores = todoChores,
                         pendingApprovalChores = pendingApprovalList,
+                        assigneeProfiles = profilesByUserId,
                         recentActivity = recentActivity,
                         errorMessage = null
                     )

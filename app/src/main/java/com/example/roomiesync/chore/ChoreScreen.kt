@@ -242,7 +242,6 @@ fun ChoreScreen(
             choreAssignment = selectedChore!!,
             onDismiss = { selectedChore = null },
             onSubmit = { photoUri ->
-                // TODO: Upload the photo to S3 and report the link to the backend
                 viewModel.submitChore(selectedChore!!.id, photoUri)
                 selectedChore = null
             }

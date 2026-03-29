@@ -5,6 +5,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -125,14 +126,52 @@ class ChoreRepository {
                 }
                 .decodeSingle<ChoreRow>()
 
-            client.postgrest.from("chore_assignments")
-                .insert(CreateChoreAssignmentPayload(
+            val assignments = generateAssignmentDates(recurrenceType, dueDateIso).map { date ->
+                CreateChoreAssignmentPayload(
                     choreId = choreRow.id,
                     assignedToId = assignedToId,
-                    dueDate = dueDateIso
-                ))
+                    dueDate = date
+                )
+            }
+
+            client.postgrest.from("chore_assignments").insert(assignments)
             Unit
         }
+    }
+
+    private fun generateAssignmentDates(recurrenceType: String, firstDueDateIso: String): List<String> {
+        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+
+        if (recurrenceType == "none") return listOf(firstDueDateIso)
+
+        val parts = recurrenceType.split("_")
+        if (parts.size != 2) return listOf(firstDueDateIso)
+
+        val interval = parts[0].toIntOrNull() ?: return listOf(firstDueDateIso)
+        val calendarUnit = when (parts[1]) {
+            "days" -> Calendar.DAY_OF_MONTH
+            "weeks" -> Calendar.WEEK_OF_YEAR
+            "months" -> Calendar.MONTH
+            else -> return listOf(firstDueDateIso)
+        }
+
+        val utc = TimeZone.getTimeZone("UTC")
+        val current = Calendar.getInstance(utc).apply {
+            time = isoFormat.parse(firstDueDateIso) ?: return listOf(firstDueDateIso)
+        }
+        val end = Calendar.getInstance(utc).apply {
+            time = current.time
+            add(Calendar.YEAR, 1)
+        }
+
+        val dates = mutableListOf<String>()
+        while (!current.after(end)) {
+            dates.add(isoFormat.format(current.time))
+            current.add(calendarUnit, interval)
+        }
+        return dates
     }
 
     suspend fun submitChoreForReview(

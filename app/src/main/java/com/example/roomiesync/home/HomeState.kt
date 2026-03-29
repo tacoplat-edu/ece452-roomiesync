@@ -26,6 +26,7 @@ data class HomeState(
     val house: House? = null,
     val chores: List<ChoreAssignment> = emptyList(),
     val pendingApprovalChores: List<ChoreAssignment> = emptyList(),
+    val assigneeProfiles: Map<String, Profile> = emptyMap(),
     val recentActivity: List<ActivityFeedItem> = emptyList(),
     val errorMessage: String? = null
 )
