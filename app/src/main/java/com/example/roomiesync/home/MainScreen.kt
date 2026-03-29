@@ -63,24 +63,22 @@ fun MainScreen(
     modifier: Modifier = Modifier,
     mainViewModel: MainViewModel = viewModel()
 ) {
-    val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
+    val mainState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    if (uiState.isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    if (mainState.isLoading) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
         return
     }
 
-    val userHasHouse = uiState.userHasHouse
+    val userHasHouse = mainState.hasHouse
     val createChoreRoute = "create_chore?prefillDateMillis={prefillDateMillis}"
     val householdOnboardingRoute = "household_onboarding?startWithJoin={startWithJoin}"
 
-    // Routes where the bottom navigation bar and top bar should be hidden
-    // We treat "profile" as a screen without the main bars (similar to Create Chore)
     val routesWithoutBars = setOf(
         "create_chore",
         createChoreRoute,
@@ -126,8 +124,8 @@ fun MainScreen(
                             onClick = {
                                 navController.navigate("profile") {
                                     launchSingleTop = true
-                            }
-                        }) {
+                                }
+                            }) {
                             val avatarUrl = profile?.avatarUrl
                             if (!avatarUrl.isNullOrEmpty()) {
                                 AsyncImage(
@@ -182,8 +180,8 @@ fun MainScreen(
                 HouseholdOnboardingScreen(
                     startWithJoin = startWithJoin,
                     onNavigateBack = { navController.popBackStack() },
-                    onOnboardingComplete = { 
-                        mainViewModel.checkUserHouse()
+                    onOnboardingComplete = {
+                        mainViewModel.refreshHouse()
                         navController.navigate(NavItem.Home.route) {
                             popUpTo(householdOnboardingRoute) { inclusive = true }
                         }
