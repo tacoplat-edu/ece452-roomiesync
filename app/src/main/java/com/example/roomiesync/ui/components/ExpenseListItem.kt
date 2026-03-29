@@ -45,7 +45,7 @@ fun ExpenseListItem(
     val iPaid = expense.paidById == currentUserId
 
     val mySplit = expenseData.splits.firstOrNull { it.profile.id == currentUserId }
-    val myShare = mySplit?.split?.amountOowed ?: 0.0
+    val myShare = mySplit?.split?.amountOwed ?: 0.0
     val mySplitIsPaid = mySplit?.split?.isPaid == true
     // Only "settled" for payer when everyone else has paid; treat null/isPaid false as unpaid
     val allOtherSplitsPaid = expenseData.splits
@@ -60,7 +60,7 @@ fun ExpenseListItem(
         val totalLent = expense.amount - myShare
         val amountUnpaid = expenseData.splits
             .filter { it.profile.id != expense.paidById && !it.split.isPaid }
-            .sumOf { it.split.amountOowed }
+            .sumOf { it.split.amountOwed }
 
         if (amountUnpaid == 0.0 && allOtherSplitsPaid) {
             statusText = "settled"

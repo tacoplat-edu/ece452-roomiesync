@@ -15,6 +15,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 
 data class ChatState(
@@ -49,7 +53,7 @@ class ChatViewModel(
 
             _uiState.update { it.copy(currentUserId = userId, currentHouseId = houseId, currentUserProfile = profile) }
 
-            val messages = chatRepository.getMessages(houseId)
+            val messages = chatRepository.getMessagesForHouse(houseId)
             _uiState.update { it.copy(isLoading = false, messages = messages) }
         }
     }
@@ -73,7 +77,9 @@ class ChatViewModel(
                 houseId = currentState.currentHouseId,
                 senderId = currentState.currentUserId,
                 content = content,
-                createdAt = System.currentTimeMillis()
+                createdAt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+                    .apply { timeZone = TimeZone.getTimeZone("UTC") }
+                    .format(Date())
             ),
             profile = profile
         )

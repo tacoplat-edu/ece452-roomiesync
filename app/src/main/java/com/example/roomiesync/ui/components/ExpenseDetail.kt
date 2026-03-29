@@ -79,7 +79,7 @@ fun ExpenseDetail(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = formatter.format(detail.split.amountOowed),
+                            text = formatter.format(detail.split.amountOwed),
                             fontWeight = FontWeight.SemiBold,
                             color = if (detail.split.isPaid) Color.Gray else Color.Black
                         )
