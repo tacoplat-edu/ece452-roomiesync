@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.roomiesync.BuildConfig
 import com.example.roomiesync.chore.Chore
 import com.example.roomiesync.chore.ChoreAssignment
+import com.example.roomiesync.data.ChatRepository
 import com.example.roomiesync.data.ChoreRepository
+import com.example.roomiesync.data.ExpenseRepository
 import com.example.roomiesync.data.ProfileRepository
 import com.example.roomiesync.data.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -22,7 +24,9 @@ import kotlin.time.Instant
 
 class HomeViewModel(
     private val choreRepository: ChoreRepository = ChoreRepository(),
-    private val profileRepository: ProfileRepository = ProfileRepository()
+    private val profileRepository: ProfileRepository = ProfileRepository(),
+    private val expenseRepository: ExpenseRepository = ExpenseRepository(),
+    private val chatRepository: ChatRepository = ChatRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeState())
@@ -129,13 +133,9 @@ class HomeViewModel(
                     it.status == "PENDING_APPROVAL" && it.assignedToId != userId
                 }
 
-                // Recent activity: all completed chores across the house, sorted newest first,
-                // capped at 20 items. Includes the current user's own approvals so they see
-                // when their submitted chores get approved and appear here.
-                val recentActivity = choreAssignments
+                // chores
+                val choreActivities = choreAssignments
                     .filter { it.status == "COMPLETED" }
-                    .sortedByDescending { it.completedAt ?: it.dueDate }
-                    .take(20)
                     .map { assignment ->
                         val isCurrentUser = assignment.assignedToId == userId
                         val assigneeName = if (isCurrentUser) "You" else
@@ -148,6 +148,62 @@ class HomeViewModel(
                             iconType = ActivityIconType.CHORE_COMPLETED
                         )
                     }
+
+                // expenses
+                val expenseActivities = try {
+                    val expenses = expenseRepository.getExpensesForHouse(house.id)
+                    expenses.map { expense ->
+                        val isCurrentUser = expense.paidById == userId
+                        val payerName = if (isCurrentUser) "You" else
+                            profilesByUserId[expense.paidById]?.displayName ?: "Someone"
+
+                        val timestamp = try {
+                            Instant.parse(expense.createdAt ?: "").toEpochMilliseconds()
+                        } catch (e: Exception) { nowMillis }
+
+                        ActivityFeedItem(
+                            id = expense.id,
+                            title = "New Expense",
+                            description = "$payerName added '${expense.description}'",
+                            timestampMillis = timestamp,
+                            iconType = ActivityIconType.BILL_PAID
+                        )
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+
+                // messages
+                val chatActivities = try {
+                    val messagesWithProfile = chatRepository.getMessagesForHouse(house.id)
+                    messagesWithProfile.map { msgWithProfile ->
+                        val msg = msgWithProfile.message
+                        val isCurrentUser = msg.senderId == userId
+                        val senderName = if (isCurrentUser) "You" else
+                            msgWithProfile.profile.displayName ?: "Someone"
+
+                        val timestamp = try {
+                            val createdAtStr = msg.createdAt.toString()
+                            Instant.parse(createdAtStr).toEpochMilliseconds()
+                        } catch (e: Exception) {
+                            (msg.createdAt as? Number)?.toLong() ?: nowMillis
+                        }
+
+                        ActivityFeedItem(
+                            id = msg.id,
+                            title = "New Message",
+                            description = "$senderName: ${msg.content}",
+                            timestampMillis = timestamp,
+                            iconType = ActivityIconType.CHAT
+                        )
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+
+                val recentActivity = (choreActivities + expenseActivities + chatActivities)
+                    .sortedByDescending { it.timestampMillis }
+                    .take(20)
 
                 _uiState.update {
                     it.copy(
