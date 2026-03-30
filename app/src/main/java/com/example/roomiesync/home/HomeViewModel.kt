@@ -13,6 +13,8 @@ import com.example.roomiesync.data.ExpenseRepository
 import com.example.roomiesync.data.ProfileRepository
 import com.example.roomiesync.data.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +33,10 @@ class HomeViewModel(
 
     private val _uiState = MutableStateFlow(HomeState())
     val uiState: StateFlow<HomeState> = _uiState.asStateFlow()
+    private var messageObservationJob: Job? = null
+    private var nonChatRecentActivity: List<ActivityFeedItem> = emptyList()
+    private var chatRecentActivity: List<ActivityFeedItem> = emptyList()
+    private var observedHouseId: String? = null
 
     init {
         loadDashboardData()
@@ -70,6 +76,7 @@ class HomeViewModel(
 
                 val house = choreRepository.getUserHouse(userId)
                 if (house == null) {
+                    stopChatObservation()
                     _uiState.update { it.copy(isLoading = false, profile = profile, errorMessage = "No household found") }
                     return@launch
                 }
@@ -173,37 +180,12 @@ class HomeViewModel(
                     emptyList()
                 }
 
-                // messages
-                val chatActivities = try {
-                    val messagesWithProfile = chatRepository.getMessagesForHouse(house.id)
-                    messagesWithProfile.map { msgWithProfile ->
-                        val msg = msgWithProfile.message
-                        val isCurrentUser = msg.senderId == userId
-                        val senderName = if (isCurrentUser) "You" else
-                            msgWithProfile.profile.displayName ?: "Someone"
-
-                        val timestamp = try {
-                            val createdAtStr = msg.createdAt.toString()
-                            Instant.parse(createdAtStr).toEpochMilliseconds()
-                        } catch (e: Exception) {
-                            (msg.createdAt as? Number)?.toLong() ?: nowMillis
-                        }
-
-                        ActivityFeedItem(
-                            id = msg.id,
-                            title = "New Message",
-                            description = "$senderName: ${msg.content}",
-                            timestampMillis = timestamp,
-                            iconType = ActivityIconType.CHAT
-                        )
-                    }
-                } catch (e: Exception) {
-                    emptyList()
+                nonChatRecentActivity = choreActivities + expenseActivities
+                if (observedHouseId != house.id) {
+                    chatRecentActivity = emptyList()
+                    observedHouseId = house.id
                 }
-
-                val recentActivity = (choreActivities + expenseActivities + chatActivities)
-                    .sortedByDescending { it.timestampMillis }
-                    .take(20)
+                val recentActivity = buildRecentActivity()
 
                 _uiState.update {
                     it.copy(
@@ -217,6 +199,8 @@ class HomeViewModel(
                         errorMessage = null
                     )
                 }
+
+                observeChatActivity(houseId = house.id, currentUserId = userId)
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
                     e.printStackTrace()
@@ -224,5 +208,58 @@ class HomeViewModel(
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to load data") }
             }
         }
+    }
+
+    private fun observeChatActivity(houseId: String, currentUserId: String) {
+        messageObservationJob?.cancel()
+        messageObservationJob = viewModelScope.launch {
+            chatRepository.observeMessagesForHouse(houseId)
+                .catch { throwable ->
+                    if (BuildConfig.DEBUG) {
+                        throwable.printStackTrace()
+                    }
+                }
+                .collect { messages ->
+                    chatRecentActivity = messages.map { messageWithProfile ->
+                        val message = messageWithProfile.message
+                        val senderName = if (message.senderId == currentUserId) {
+                            "You"
+                        } else {
+                            messageWithProfile.profile.displayName ?: "Someone"
+                        }
+
+                        val timestamp = try {
+                            Instant.parse(message.createdAt).toEpochMilliseconds()
+                        } catch (_: Exception) {
+                            System.currentTimeMillis()
+                        }
+
+                        ActivityFeedItem(
+                            id = message.id,
+                            title = "New Message",
+                            description = "$senderName: ${message.content}",
+                            timestampMillis = timestamp,
+                            iconType = ActivityIconType.CHAT
+                        )
+                    }
+                    _uiState.update { state ->
+                        state.copy(recentActivity = buildRecentActivity())
+                    }
+                }
+        }
+    }
+
+    private fun stopChatObservation() {
+        messageObservationJob?.cancel()
+        messageObservationJob = null
+        observedHouseId = null
+        chatRecentActivity = emptyList()
+        nonChatRecentActivity = emptyList()
+    }
+
+    private fun buildRecentActivity(): List<ActivityFeedItem> {
+        return (nonChatRecentActivity + chatRecentActivity)
+            .sortedByDescending { it.timestampMillis }
+            .take(20)
     }
 }

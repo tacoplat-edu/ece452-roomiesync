@@ -102,6 +102,19 @@ create table public.messages (
   created_at timestamptz default now()
 );
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'messages'
+  ) then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+end $$;
+
 -- 6. AUTOMATION FUNCTIONS & TRIGGERS
 -- Create profile on signup
 create function public.handle_new_user() returns trigger as $$

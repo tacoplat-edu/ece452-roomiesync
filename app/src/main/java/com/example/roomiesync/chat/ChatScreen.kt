@@ -113,7 +113,10 @@ fun ChatScreen(
                 )
             }
 
-            items(uiState.messages) { messageData ->
+            items(
+                items = uiState.messages,
+                key = { it.message.id }
+            ) { messageData ->
                 val isSelf = messageData.message.senderId == uiState.currentUserId
                 ChatBubble(messageData = messageData, isSelf = isSelf)
             }
