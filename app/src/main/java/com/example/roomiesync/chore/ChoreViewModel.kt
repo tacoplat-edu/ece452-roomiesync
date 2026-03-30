@@ -5,10 +5,13 @@ package com.example.roomiesync.chore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.roomiesync.BuildConfig
+import com.example.roomiesync.data.ChoreAssignmentRow
 import com.example.roomiesync.data.ChoreRepository
 import com.example.roomiesync.data.SupabaseClient
 import com.example.roomiesync.ui.components.ChoreStatus
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +33,8 @@ class ChoreViewModel(
 
     private var allChores: List<ChoreAssignment> = emptyList()
     private var currentUserId: String? = null
+    private var choreObservationJob: Job? = null
+    private var observedHouseId: String? = null
 
     init {
         loadChores()
@@ -46,55 +51,25 @@ class ChoreViewModel(
             try {
                 val userId = SupabaseClient.client.auth.currentUserOrNull()?.id
                 currentUserId = userId
-                if (userId == null) return@launch
-
-                val house = choreRepository.getUserHouse(userId)
-                if (house == null) {
+                if (userId == null) {
+                    stopObservingChores()
                     _uiState.update { it.copy(isLoading = false) }
                     return@launch
                 }
 
-                val rows = choreRepository.getChoreAssignments(house.id)
-                val now = Clock.System.now()
+                val house = choreRepository.getUserHouse(userId)
+                if (house == null) {
+                    stopObservingChores()
+                    _uiState.update { it.copy(isLoading = false) }
+                    return@launch
+                }
 
-                allChores = rows.mapNotNull { row ->
-                    val choreData = row.chores ?: return@mapNotNull null
-                    val dueInstant = try {
-                        Instant.parse(row.dueDate ?: return@mapNotNull null)
-                    } catch (_: Exception) { return@mapNotNull null }
+                if (observedHouseId == house.id && choreObservationJob != null) {
+                    _uiState.update { it.copy(isLoading = false) }
+                    return@launch
+                }
 
-                    val uiStatus = when (row.status) {
-                        "completed" -> "COMPLETED"
-                        "pending_approval" -> "PENDING_APPROVAL"
-                        else -> when {
-                            dueInstant < now -> "OVERDUE"
-                            dueInstant - now < 24.hours -> "URGENT"
-                            else -> "NOT_URGENT"
-                        }
-                    }
-
-                    ChoreAssignment(
-                        id = row.id,
-                        choreId = row.choreId,
-                        assignedToId = row.assignedToId,
-                        status = uiStatus,
-                        proofPhotoUrl = row.proofPhotoUrl,
-                        verifiedBy = row.verifiedBy,
-                        dueDate = dueInstant,
-                        completedAt = row.completedAt?.let { try { Instant.parse(it) } catch (_: Exception) { null } },
-                        chore = Chore(
-                            id = choreData.id,
-                            houseId = choreData.houseId,
-                            title = choreData.title,
-                            description = choreData.description ?: "",
-                            recurrenceType = choreData.recurrenceType ?: "none",
-                            createdAt = try { Instant.parse(choreData.createdAt ?: "") } catch (_: Exception) { now }
-                        )
-                    )
-                }.filter { it.status != "COMPLETED" }
-
-                applyFilters()
-                _uiState.update { it.copy(isLoading = false) }
+                observeChores(house.id)
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
                     e.printStackTrace()
@@ -104,10 +79,70 @@ class ChoreViewModel(
         }
     }
 
+    private fun observeChores(houseId: String) {
+        choreObservationJob?.cancel()
+        observedHouseId = houseId
+        choreObservationJob = viewModelScope.launch {
+            choreRepository.observeChoreAssignments(houseId)
+                .catch { throwable ->
+                    if (BuildConfig.DEBUG) {
+                        throwable.printStackTrace()
+                    }
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+                .collect { rows ->
+                    allChores = mapRowsToAssignments(rows).filter { it.status != "COMPLETED" }
+                    applyFilters()
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+        }
+    }
+
+    private fun mapRowsToAssignments(rows: List<ChoreAssignmentRow>): List<ChoreAssignment> {
+        val now = Clock.System.now()
+
+        return rows.mapNotNull { row ->
+            val choreData = row.chores ?: return@mapNotNull null
+            val dueInstant = try {
+                Instant.parse(row.dueDate ?: return@mapNotNull null)
+            } catch (_: Exception) {
+                return@mapNotNull null
+            }
+
+            val uiStatus = when (row.status) {
+                "completed" -> "COMPLETED"
+                "pending_approval" -> "PENDING_APPROVAL"
+                else -> when {
+                    dueInstant < now -> "OVERDUE"
+                    dueInstant - now < 24.hours -> "URGENT"
+                    else -> "NOT_URGENT"
+                }
+            }
+
+            ChoreAssignment(
+                id = row.id,
+                choreId = row.choreId,
+                assignedToId = row.assignedToId,
+                status = uiStatus,
+                proofPhotoUrl = row.proofPhotoUrl,
+                verifiedBy = row.verifiedBy,
+                dueDate = dueInstant,
+                completedAt = row.completedAt?.let { try { Instant.parse(it) } catch (_: Exception) { null } },
+                chore = Chore(
+                    id = choreData.id,
+                    houseId = choreData.houseId,
+                    title = choreData.title,
+                    description = choreData.description ?: "",
+                    recurrenceType = choreData.recurrenceType ?: "none",
+                    createdAt = try { Instant.parse(choreData.createdAt ?: "") } catch (_: Exception) { now }
+                )
+            )
+        }
+    }
+
     fun submitChore(choreId: String, photoUrl: String) {
         viewModelScope.launch {
             choreRepository.submitChoreForReview(choreId, photoUrl)
-                .onSuccess { loadChores() }
                 .onFailure { e -> 
                     if (BuildConfig.DEBUG) {
                         e.printStackTrace()
@@ -120,7 +155,6 @@ class ChoreViewModel(
         viewModelScope.launch {
             val userId = currentUserId ?: return@launch
             choreRepository.approveChore(assignmentId, userId)
-                .onSuccess { loadChores() }
                 .onFailure { e -> 
                     if (BuildConfig.DEBUG) {
                         e.printStackTrace()
@@ -132,7 +166,6 @@ class ChoreViewModel(
     fun rejectChore(assignmentId: String) {
         viewModelScope.launch {
             choreRepository.rejectChore(assignmentId)
-                .onSuccess { loadChores() }
                 .onFailure { e -> 
                     if (BuildConfig.DEBUG) {
                         e.printStackTrace()
@@ -200,5 +233,13 @@ class ChoreViewModel(
         }
 
         _uiState.update { it.copy(chores = filtered) }
+    }
+
+    private fun stopObservingChores() {
+        choreObservationJob?.cancel()
+        choreObservationJob = null
+        observedHouseId = null
+        allChores = emptyList()
+        _uiState.update { it.copy(chores = emptyList()) }
     }
 }

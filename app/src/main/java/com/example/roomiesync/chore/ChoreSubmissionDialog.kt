@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import com.example.roomiesync.BuildConfig
 import com.example.roomiesync.data.SupabaseClient
 import com.example.roomiesync.ui.components.ChoreStatus
 import com.example.roomiesync.ui.components.FullWidthButtonWithIcon
@@ -238,14 +237,10 @@ fun ChoreSubmissionDialog(
                                                     // Upload file
                                                     bucket.upload(fileName, bytes)
                                                     
-                                                    // Get public URL using SUPABASE_S3_URL as requested
-                                                    "${BuildConfig.SUPABASE_S3_URL}/chore_validation_photos/$fileName"
+                                                    bucket.publicUrl(fileName)
                                                 }
                                                 onSubmit(publicUrl)
                                             } catch (e: Exception) {
-                                                if (BuildConfig.DEBUG) {
-                                                    e.printStackTrace()
-                                                }
                                                 errorMessage = e.message ?: "Upload failed"
                                                 isLoading = false
                                             }

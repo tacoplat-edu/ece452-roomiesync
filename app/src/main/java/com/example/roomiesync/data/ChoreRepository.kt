@@ -1,14 +1,25 @@
 package com.example.roomiesync.data
 
 import com.example.roomiesync.BuildConfig
+import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.filter.FilterOperation
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.realtime.selectAsFlow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -109,6 +120,49 @@ class ChoreRepository {
             }
             emptyList()
         }
+    }
+
+    @OptIn(SupabaseExperimental::class)
+    fun observeChoreAssignments(houseId: String): Flow<List<ChoreAssignmentRow>> {
+        return channelFlow {
+            var lastEmitted: List<ChoreAssignmentRow>? = null
+
+            suspend fun emitIfChanged(rows: List<ChoreAssignmentRow>) {
+                val normalizedRows = rows.sortedWith(compareBy({ it.dueDate ?: "" }, { it.id }))
+                if (normalizedRows != lastEmitted) {
+                    lastEmitted = normalizedRows
+                    trySend(normalizedRows)
+                }
+            }
+
+            launch {
+                client.postgrest.from("chore_assignments")
+                    .selectAsFlow<ChoreAssignmentRow, String>(primaryKey = ChoreAssignmentRow::id)
+                    .map { getChoreAssignments(houseId) }
+                    .collect { rows ->
+                        emitIfChanged(rows)
+                    }
+            }
+
+            launch {
+                client.postgrest.from("chores")
+                    .selectAsFlow<ChoreRow, String>(
+                        primaryKey = ChoreRow::id,
+                        filter = FilterOperation("house_id", FilterOperator.EQ, houseId)
+                    )
+                    .map { getChoreAssignments(houseId) }
+                    .collect { rows ->
+                        emitIfChanged(rows)
+                    }
+            }
+
+            launch {
+                while (isActive) {
+                    emitIfChanged(getChoreAssignments(houseId))
+                    delay(CHORE_POLL_INTERVAL_MS)
+                }
+            }
+        }.flowOn(Dispatchers.IO)
     }
 
     suspend fun createChoreWithAssignment(
@@ -220,5 +274,9 @@ class ChoreRepository {
                 }
             Unit
         }
+    }
+
+    private companion object {
+        const val CHORE_POLL_INTERVAL_MS = 2_500L
     }
 }

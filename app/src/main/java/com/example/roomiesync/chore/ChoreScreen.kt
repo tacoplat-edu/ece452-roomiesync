@@ -50,7 +50,6 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,13 +90,9 @@ fun ChoreScreen(
     val uiState by viewModel.uiState.collectAsState()
     val queryParams by viewModel.queryParams.collectAsState()
     val focusManager = LocalFocusManager.current
-    var selectedChore by remember { mutableStateOf<ChoreAssignment?>(null) }
-    var reviewChore by remember { mutableStateOf<ChoreAssignment?>(null) }
+    var selectedChoreId by remember { mutableStateOf<String?>(null) }
+    var reviewChoreId by remember { mutableStateOf<String?>(null) }
     val currentUserId = remember { SupabaseClient.client.auth.currentUserOrNull()?.id }
-
-    LaunchedEffect(Unit) {
-        viewModel.refresh()
-    }
 
     var showSortSheet by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -149,7 +144,10 @@ fun ChoreScreen(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(uiState.chores) { choreAssignment ->
+            items(
+                items = uiState.chores,
+                key = { it.id }
+            ) { choreAssignment ->
                 val chore = choreAssignment.chore
                 if (chore != null) {
                     val timeText = getRelativeTimeText(choreAssignment.dueDate)
@@ -168,9 +166,9 @@ fun ChoreScreen(
                             if (visualStatus == ChoreStatus.PENDING_APPROVAL
                                 && choreAssignment.assignedToId != currentUserId
                             ) {
-                                reviewChore = choreAssignment
+                                reviewChoreId = choreAssignment.id
                             } else if (visualStatus != ChoreStatus.PENDING_APPROVAL) {
-                                selectedChore = choreAssignment
+                                selectedChoreId = choreAssignment.id
                             }
                         }
                     )
@@ -237,24 +235,36 @@ fun ChoreScreen(
         }
     }
 
-    if (selectedChore != null) {
-        ChoreSubmissionDialog(
-            choreAssignment = selectedChore!!,
-            onDismiss = { selectedChore = null },
-            onSubmit = { photoUri ->
-                viewModel.submitChore(selectedChore!!.id, photoUri)
-                selectedChore = null
-            }
-        )
+    selectedChoreId?.let { choreId ->
+        val assignment = uiState.chores.firstOrNull { it.id == choreId }
+
+        if (assignment != null) {
+            ChoreSubmissionDialog(
+                choreAssignment = assignment,
+                onDismiss = { selectedChoreId = null },
+                onSubmit = { photoUrl ->
+                    viewModel.submitChore(choreId, photoUrl)
+                    selectedChoreId = null
+                }
+            )
+        } else {
+            selectedChoreId = null
+        }
     }
 
-    if (reviewChore != null) {
-        KudosDialog(
-            choreAssignment = reviewChore!!,
-            onDismiss = { reviewChore = null },
-            onApprove = { id -> viewModel.approveChore(id) },
-            onReject = { id -> viewModel.rejectChore(id) }
-        )
+    reviewChoreId?.let { choreId ->
+        val assignment = uiState.chores.firstOrNull { it.id == choreId }
+
+        if (assignment != null) {
+            KudosDialog(
+                choreAssignment = assignment,
+                onDismiss = { reviewChoreId = null },
+                onApprove = { id -> viewModel.approveChore(id) },
+                onReject = { id -> viewModel.rejectChore(id) }
+            )
+        } else {
+            reviewChoreId = null
+        }
     }
 }
 

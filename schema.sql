@@ -75,6 +75,29 @@ create table public.chore_assignments (
   completed_at timestamptz
 );
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'chores'
+  ) then
+    alter publication supabase_realtime add table public.chores;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'chore_assignments'
+  ) then
+    alter publication supabase_realtime add table public.chore_assignments;
+  end if;
+end $$;
+
 -- 4. FINANCES (Expenses & Splits)
 create table public.expenses (
   id uuid primary key default gen_random_uuid(),
